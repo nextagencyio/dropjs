@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+*.db
+data/
+.env
+*.tsbuildinfo
+coverage/
+e2e-data/
+playwright-report/
+test-results/
+plan.md
+*.png
+!public/*.png

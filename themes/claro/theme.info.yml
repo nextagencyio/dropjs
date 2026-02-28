@@ -1,0 +1,13 @@
+name: Claro
+type: theme
+description: A clean, accessible, and modern administrative theme.
+version: 0.1.0
+engine: react
+core_version_requirement: ^0.1
+admin: true
+
+regions:
+  header: Header
+  content: Content
+  sidebar: Sidebar
+  footer: Footer

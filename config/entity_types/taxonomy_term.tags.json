@@ -1,0 +1,7 @@
+{
+  "entity_type": "taxonomy_term",
+  "bundle": "tags",
+  "label": "Tags",
+  "description": "Use tags to group articles on similar topics.",
+  "fields": {}
+}

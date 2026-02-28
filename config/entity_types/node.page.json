@@ -1,0 +1,13 @@
+{
+  "entity_type": "node",
+  "bundle": "page",
+  "label": "Basic page",
+  "description": "Use basic pages for your static content, such as an 'About us' page.",
+  "fields": {
+    "field_body": {
+      "type": "text_long",
+      "label": "Body",
+      "cardinality": 1
+    }
+  }
+}

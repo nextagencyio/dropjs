@@ -1,12 +1,27 @@
 {
   "name": "dropjs",
   "version": "0.1.0",
-  "private": true,
   "description": "A Node.js CMS framework inspired by Drupal",
   "type": "module",
+  "license": "ISC",
+  "main": "dist/core/index.js",
+  "types": "dist/core/index.d.ts",
+  "exports": {
+    ".": "./dist/core/index.js",
+    "./api": "./dist/api/index.js",
+    "./auth": "./dist/auth/index.js",
+    "./db": "./dist/db/index.js",
+    "./field": "./dist/field/index.js"
+  },
   "bin": {
     "drop": "dist/bin/drop.js"
   },
+  "files": [
+    "dist/",
+    "config/",
+    "themes/",
+    "README.md"
+  ],
   "scripts": {
     "dev": "npx tsx src/cli/commands/dev.ts",
     "build": "tsc -p tsconfig.server.json && next build",

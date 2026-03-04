@@ -59,15 +59,19 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 ## Quick Start
 
 ```bash
+# Install globally
+npm install -g dropjs
+
 # Create a new project
-npx create-drop-app my-site
+drop init my-site
 cd my-site
+npm install
 
 # Start dev server (SQLite, zero config)
-drop dev
+npm run dev
 
 # API is live at http://localhost:3000/api
-# Admin UI at http://localhost:3000/admin
+# Admin UI at http://localhost:3000
 # Swagger docs at http://localhost:3000/api/docs
 ```
 
@@ -754,7 +758,7 @@ Requires Node.js >= 18.0.0.
 │                  Applications                    │
 │       (Next.js Admin UI, API consumers)          │
 ├─────────────────────────────────────────────────┤
-│               src/api (Express)                  │
+│            src/api (Custom HTTP)                  │
 │  REST · OpenAPI · CSRF · Rate Limiting · Media   │
 ├─────────────────────────────────────────────────┤
 │                 src/core                          │

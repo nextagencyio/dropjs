@@ -22,15 +22,14 @@ const PACKAGE_JSON_TEMPLATE = `{
   "type": "module",
   "scripts": {
     "dev": "drop dev",
-    "migrate": "drop migrate:run",
-    "migrate:rollback": "drop migrate:rollback",
-    "migrate:status": "drop migrate:status"
+    "build": "drop build",
+    "serve": "drop serve",
+    "migrate": "drop migrate run",
+    "migrate:rollback": "drop migrate rollback",
+    "migrate:status": "drop migrate status"
   },
   "dependencies": {
-    "@dropjs/core": "^0.1.0",
-    "@dropjs/db": "^0.1.0",
-    "@dropjs/field": "^0.1.0",
-    "@dropjs/cli": "^0.1.0"
+    "dropjs": "^0.1.0"
   }
 }
 `;
@@ -130,6 +129,5 @@ export function createApp(name: string, options: CreateAppOptions = {}): void {
   console.log('Next steps:');
   console.log(`  cd ${name}`);
   console.log('  npm install');
-  console.log('  npx drop migrate:run');
-  console.log('  npx drop dev\n');
+  console.log('  npm run dev\n');
 }

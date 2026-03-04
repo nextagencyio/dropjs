@@ -1,9 +1,8 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-server';
+import { CommentsSection } from './comments-client';
+import { EditLink } from './edit-link';
 
 interface NodeFull {
   nid: number;
@@ -15,9 +14,40 @@ interface NodeFull {
   changed: number;
   langcode: string;
   field_body?: { value: string; format?: string; summary?: string };
-  field_image?: { url?: string; alt?: string } | null;
+  field_image?: { url?: string; alt?: string; large_url?: string; medium_url?: string } | null;
   field_tags?: Array<{ target_id: number; name?: string }>;
   [key: string]: unknown;
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const res = await apiFetch<{ data: NodeFull }>(`/api/entity/node/${id}`);
+  const node = res?.data;
+
+  if (!node) {
+    return { title: 'Page not found' };
+  }
+
+  const description = node.field_body
+    ? stripHtml(node.field_body.summary || node.field_body.value).slice(0, 160)
+    : '';
+
+  return {
+    title: node.title,
+    description,
+    openGraph: {
+      title: node.title,
+      description,
+      type: 'article',
+      ...(node.field_image?.large_url || node.field_image?.url
+        ? { images: [{ url: node.field_image.large_url || node.field_image.url! }] }
+        : {}),
+    },
+  };
 }
 
 function formatDate(timestamp: number): string {
@@ -30,60 +60,24 @@ function formatDate(timestamp: number): string {
   });
 }
 
-export default function NodeViewPage() {
-  const params = useParams();
-  const id = params.id as string;
-  const { user } = useAuth();
-  const [node, setNode] = useState<NodeFull | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default async function NodeViewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const res = await apiFetch<{ data: NodeFull }>(`/api/entity/node/${id}`);
+  const node = res?.data;
 
-  useEffect(() => {
-    if (!id) return;
-
-    async function loadNode() {
-      try {
-        const res = await fetch(`/api/entity/node/${id}`);
-        if (!res.ok) {
-          if (res.status === 404) {
-            setError('The requested page could not be found.');
-          } else if (res.status === 403) {
-            setError('You are not authorized to view this content.');
-          } else {
-            setError('An error occurred while loading this page.');
-          }
-          return;
-        }
-        const data = await res.json();
-        setNode(data.data || data);
-      } catch {
-        setError('An error occurred while loading this page.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadNode();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-gin-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (error || !node) {
+  if (!node) {
     return (
       <div className="py-20 text-center">
         <h1 className="text-2xl font-semibold text-gray-700 mb-2">Page not found</h1>
-        <p className="text-gray-500">{error || 'The requested page could not be found.'}</p>
+        <p className="text-gray-500">The requested page could not be found.</p>
         <Link href="/front" className="text-gin-primary hover:underline mt-4 inline-block">
           &larr; Back to home
         </Link>
       </div>
     );
   }
+
+  const imageUrl = node.field_image?.large_url || node.field_image?.url;
 
   return (
     <article>
@@ -96,16 +90,22 @@ export default function NodeViewPage() {
               {node.type}
             </span>
           )}
-          {user && (
-            <Link
-              href={`/node/${node.nid}/edit`}
-              className="text-gin-primary hover:underline"
-            >
-              Edit
-            </Link>
-          )}
+          <EditLink nid={node.nid} />
         </div>
       </header>
+
+      {imageUrl && (
+        <figure className="mb-6">
+          <img
+            src={imageUrl}
+            alt={node.field_image?.alt || node.title}
+            className="w-full max-h-[500px] object-cover rounded"
+          />
+          {node.field_image?.alt && (
+            <figcaption className="text-sm text-gray-500 mt-2">{node.field_image.alt}</figcaption>
+          )}
+        </figure>
+      )}
 
       {node.field_body?.value && (
         <div
@@ -128,6 +128,8 @@ export default function NodeViewPage() {
           ))}
         </footer>
       )}
+
+      <CommentsSection nodeId={node.nid} />
     </article>
   );
 }

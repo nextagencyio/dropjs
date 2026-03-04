@@ -14,7 +14,7 @@ test.describe('Public Frontend', () => {
 
     // Should have site header with site name
     await expect(page.locator('header')).toBeVisible();
-    await expect(page.getByText('DropJS').first()).toBeVisible();
+    await expect(page.getByText('drop.js').first()).toBeVisible();
 
     // Should have footer
     await expect(page.locator('footer')).toBeVisible();

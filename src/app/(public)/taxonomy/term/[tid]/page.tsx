@@ -1,8 +1,6 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api-server';
 
 interface TaxonomyTerm {
   tid: number;
@@ -33,73 +31,45 @@ function formatDate(timestamp: number): string {
   });
 }
 
-export default function TaxonomyTermPage() {
-  const params = useParams();
-  const tid = params.tid as string;
-  const [term, setTerm] = useState<TaxonomyTerm | null>(null);
-  const [nodes, setNodes] = useState<NodeTeaser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export async function generateMetadata({ params }: { params: Promise<{ tid: string }> }): Promise<Metadata> {
+  const { tid } = await params;
+  const res = await apiFetch<{ data: TaxonomyTerm }>(`/api/entity/taxonomy_term/${tid}`);
+  const term = res?.data;
+  if (!term) return { title: 'Term not found' };
+  return { title: term.name };
+}
 
-  useEffect(() => {
-    if (!tid) return;
+export default async function TaxonomyTermPage({ params }: { params: Promise<{ tid: string }> }) {
+  const { tid } = await params;
+  const termRes = await apiFetch<{ data: TaxonomyTerm }>(`/api/entity/taxonomy_term/${tid}`);
+  const term = termRes?.data;
 
-    async function loadTerm() {
-      try {
-        // Load the term
-        const termRes = await fetch(`/api/entity/taxonomy_term/${tid}`);
-        if (!termRes.ok) {
-          setError('Term not found.');
-          setLoading(false);
-          return;
-        }
-        const termData = await termRes.json();
-        const termObj = termData.data || termData;
-        setTerm(termObj);
-
-        // Load content tagged with this term
-        // Search across article and page types for entities referencing this term
-        const [articles, pages] = await Promise.all([
-          fetch(`/api/node/article?filter[status]=1&sort=-created&page[limit]=50`).then(r => r.json()),
-          fetch(`/api/node/page?filter[status]=1&sort=-created&page[limit]=50`).then(r => r.json()),
-        ]);
-        const all = [...(articles.data || []), ...(pages.data || [])];
-        // Filter by tag reference
-        const tagged = all.filter((n: any) => {
-          const tags = n.field_tags;
-          if (!Array.isArray(tags)) return false;
-          return tags.some((t: any) => String(t.target_id) === String(tid) || String(t) === String(tid));
-        });
-        tagged.sort((a: NodeTeaser, b: NodeTeaser) => b.created - a.created);
-        setNodes(tagged);
-      } catch {
-        setError('An error occurred while loading this page.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadTerm();
-  }, [tid]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-6 h-6 border-2 border-gin-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (error || !term) {
+  if (!term) {
     return (
       <div className="py-20 text-center">
         <h1 className="text-2xl font-semibold text-gray-700 mb-2">Term not found</h1>
-        <p className="text-gray-500">{error}</p>
+        <p className="text-gray-500">The requested term could not be found.</p>
         <Link href="/front" className="text-gin-primary hover:underline mt-4 inline-block">
           &larr; Back to home
         </Link>
       </div>
     );
   }
+
+  // Load content tagged with this term
+  const [articles, pages] = await Promise.all([
+    apiFetch<{ data: NodeTeaser[] }>('/api/node/article?filter[status]=1&sort=-created&page[limit]=50'),
+    apiFetch<{ data: NodeTeaser[] }>('/api/node/page?filter[status]=1&sort=-created&page[limit]=50'),
+  ]);
+
+  const all = [...(articles?.data || []), ...(pages?.data || [])];
+  const nodes = all
+    .filter((n: any) => {
+      const tags = n.field_tags;
+      if (!Array.isArray(tags)) return false;
+      return tags.some((t: any) => String(t.target_id) === String(tid) || String(t) === String(tid));
+    })
+    .sort((a, b) => b.created - a.created);
 
   return (
     <div>

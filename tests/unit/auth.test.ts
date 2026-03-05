@@ -142,7 +142,8 @@ describe('@dropjs/auth', () => {
     it('should create a session with a token', async () => {
       const session = await createSession(testUid);
       expect(session.token).toBeDefined();
-      expect(session.token.length).toBe(64);
+      expect(session.token).toContain('.');
+      expect(session.token.length).toBeGreaterThan(64);
       expect(session.uid).toBe(testUid);
       expect(session.expires).toBeDefined();
     });

@@ -433,10 +433,18 @@ export class AdaptedResponse {
     }
 
     const stat = fs.statSync(absPath);
+    const etag = `"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
+    const isStyleDerivative = absPath.includes('/styles/');
+
     this._raw.writeHead(this._statusCode, {
       ...this._collectHeaders(),
       'Content-Type': getMimeType(absPath),
       'Content-Length': stat.size,
+      'ETag': etag,
+      'Cache-Control': isStyleDerivative
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=86400',
+      'Last-Modified': stat.mtime.toUTCString(),
     });
 
     const stream = fs.createReadStream(absPath);

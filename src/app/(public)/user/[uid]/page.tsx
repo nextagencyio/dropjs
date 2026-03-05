@@ -1,7 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api-server';
-import Pager from '@/components/pager';
+
+interface UserProfile {
+  uid: number;
+  name: string;
+  created: string;
+  roles: string[];
+}
 
 interface NodeTeaser {
   nid: number;
@@ -10,8 +16,6 @@ interface NodeTeaser {
   status: number;
   uid: number;
   created: number;
-  promote: number;
-  sticky: number;
   field_body?: { value: string; format?: string; summary?: string };
   field_image?: { url?: string; alt?: string; medium_url?: string; thumbnail_url?: string } | null;
   field_tags?: Array<{ target_id: number; name?: string }>;
@@ -20,22 +24,6 @@ interface NodeTeaser {
 interface ApiResponse {
   data: NodeTeaser[];
   meta?: { total: number };
-}
-
-interface SiteConfig {
-  name: string;
-  slogan: string;
-}
-
-export async function generateMetadata(): Promise<Metadata> {
-  const configRes = await apiFetch<{ data: SiteConfig }>('/api/config/site');
-  const siteName = configRes?.data?.name || 'drop.js';
-  const slogan = configRes?.data?.slogan || '';
-
-  return {
-    title: slogan ? `${siteName} — ${slogan}` : siteName,
-    description: slogan || `Welcome to ${siteName}`,
-  };
 }
 
 function stripHtml(html: string): string {
@@ -50,12 +38,35 @@ function formatDate(timestamp: number): string {
   });
 }
 
+function formatIsoDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 function getTeaser(node: NodeTeaser): string {
   const body = node.field_body;
   if (!body) return '';
   if (body.summary) return stripHtml(body.summary);
   const plain = stripHtml(body.value);
   return plain.length > 300 ? plain.slice(0, 300) + '...' : plain;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ uid: string }> }): Promise<Metadata> {
+  const { uid } = await params;
+  const res = await apiFetch<{ data: UserProfile }>(`/api/users/${uid}/profile`);
+  const user = res?.data;
+
+  if (!user) {
+    return { title: 'User not found' };
+  }
+
+  return {
+    title: `${user.name} | User profile`,
+    description: `Profile page for ${user.name}`,
+  };
 }
 
 function NodeCard({ node }: { node: NodeTeaser }) {
@@ -113,48 +124,56 @@ function NodeCard({ node }: { node: NodeTeaser }) {
   );
 }
 
-const ITEMS_PER_PAGE = 10;
+export default async function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
+  const { uid } = await params;
+  const res = await apiFetch<{ data: UserProfile }>(`/api/users/${uid}/profile`);
+  const user = res?.data;
 
-export default async function FrontPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const { page: pageParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-
-  const [articles, pages] = await Promise.all([
-    apiFetch<ApiResponse>(`/api/node/article?filter[status]=1&filter[promote]=1&sort=-sticky,-created&page[limit]=${ITEMS_PER_PAGE}&page[offset]=${offset}`),
-    apiFetch<ApiResponse>(`/api/node/page?filter[status]=1&filter[promote]=1&sort=-sticky,-created&page[limit]=${ITEMS_PER_PAGE}&page[offset]=${offset}`),
-  ]);
-
-  const totalArticles = articles?.meta?.total || 0;
-  const totalPages = pages?.meta?.total || 0;
-  const totalItems = totalArticles + totalPages;
-
-  const nodes = [...(articles?.data || []), ...(pages?.data || [])];
-  nodes.sort((a, b) => {
-    if (a.sticky !== b.sticky) return b.sticky - a.sticky;
-    return b.created - a.created;
-  });
-
-  if (nodes.length === 0 && currentPage === 1) {
+  if (!user) {
     return (
-      <div className="text-center py-20">
-        <h1 className="text-2xl font-semibold text-gray-700 mb-2">Welcome to drop.js</h1>
-        <p className="text-gray-500">No published content yet. <Link href="/login" className="text-gin-primary hover:underline">Log in</Link> to create your first content.</p>
+      <div className="py-20 text-center">
+        <h1 className="text-2xl font-semibold text-gray-700 mb-2">User not found</h1>
+        <p className="text-gray-500">The requested user profile could not be found.</p>
+        <Link href="/front" className="text-gin-primary hover:underline mt-4 inline-block">
+          &larr; Back to home
+        </Link>
       </div>
     );
   }
 
+  const articlesRes = await apiFetch<ApiResponse>(
+    `/api/node/article?filter[uid]=${user.uid}&filter[status]=1&sort=-created&page[limit]=10`
+  );
+  const nodes = articlesRes?.data || [];
+
   return (
     <div>
-      {nodes.map((node) => (
-        <NodeCard key={`${node.type}-${node.nid}`} node={node} />
-      ))}
-      <Pager
-        currentPage={currentPage}
-        totalItems={totalItems}
-        itemsPerPage={ITEMS_PER_PAGE}
-        basePath="/front"
-      />
+      <header className="mb-8 pb-6 border-b border-gray-200">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-gin-primary/10 flex items-center justify-center text-2xl font-bold text-gin-primary">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Member since {formatIsoDate(user.created)}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <section>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Published content
+        </h2>
+        {nodes.length > 0 ? (
+          nodes.map((node) => (
+            <NodeCard key={`${node.type}-${node.nid}`} node={node} />
+          ))
+        ) : (
+          <p className="text-gray-500">This user has not published any content yet.</p>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
+import 'dotenv/config';
 import { createConnection } from '../db/index.js';
 import {
   loadEntityTypesFromDir,

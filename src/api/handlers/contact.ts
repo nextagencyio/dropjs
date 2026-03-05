@@ -11,6 +11,7 @@ import {
   updateMessageStatus,
   deleteContactMessage,
   countContactMessages,
+  sendContactNotification,
 } from '../../core/index.js';
 import { BadRequestError, NotFoundError } from '../errors.js';
 
@@ -167,6 +168,15 @@ export async function handleSubmitContact(
     message,
     uid,
   });
+
+  // Send email notification (fire-and-forget)
+  sendContactNotification({
+    formName: form.label || machineName,
+    name,
+    email,
+    subject,
+    message,
+  }).catch(() => {});
 
   res.status(201).json({ data: contactMessage });
 }

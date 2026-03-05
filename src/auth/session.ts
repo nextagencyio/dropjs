@@ -11,6 +11,39 @@ export interface Session {
 
 const DEFAULT_EXPIRY_HOURS = 24 * 7; // 1 week
 
+// HMAC session signing
+const SESSION_SECRET: string = (() => {
+  const envSecret = process.env.SESSION_SECRET;
+  if (envSecret) return envSecret;
+  console.warn(
+    '[dropjs] WARNING: SESSION_SECRET is not set. Using a random secret — sessions will not survive restarts. Set SESSION_SECRET in .env for production.'
+  );
+  return crypto.randomBytes(32).toString('hex');
+})();
+
+function hmacSign(token: string): string {
+  return crypto.createHmac('sha256', SESSION_SECRET).update(token).digest('hex');
+}
+
+function signToken(token: string): string {
+  return token + '.' + hmacSign(token);
+}
+
+function verifyAndExtractToken(signedToken: string): string | null {
+  const dotIndex = signedToken.indexOf('.');
+  if (dotIndex === -1) {
+    // Unsigned legacy token — allow fallthrough for backwards compatibility
+    return signedToken;
+  }
+  const token = signedToken.substring(0, dotIndex);
+  const signature = signedToken.substring(dotIndex + 1);
+  const expected = hmacSign(token);
+  if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) {
+    return null;
+  }
+  return token;
+}
+
 export function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
@@ -38,10 +71,13 @@ export async function createSession(
     })
     .execute();
 
-  return { sid, uid, token, created, expires: expiresStr };
+  return { sid, uid, token: signToken(token), created, expires: expiresStr };
 }
 
-export async function validateToken(token: string): Promise<Session | null> {
+export async function validateToken(signedToken: string): Promise<Session | null> {
+  const token = verifyAndExtractToken(signedToken);
+  if (token === null) return null;
+
   const conn = getConnection();
   const now = new Date().toISOString();
 
@@ -71,7 +107,9 @@ export async function validateToken(token: string): Promise<Session | null> {
   };
 }
 
-export async function destroySession(token: string): Promise<void> {
+export async function destroySession(signedToken: string): Promise<void> {
+  const token = verifyAndExtractToken(signedToken);
+  if (token === null) return;
   await db.delete('sessions').condition('token', token).execute();
 }
 

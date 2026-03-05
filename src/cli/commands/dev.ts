@@ -1,4 +1,6 @@
 import http from 'node:http';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { destroyConnection } from '../../db/index.js';
 import { stopCron, stopQueueProcessor, Entity, createLogger } from '../../core/index.js';
 import { createUser, loadUserByName } from '../../auth/index.js';
@@ -6,6 +8,14 @@ import { ensureInitialized } from '../../api/init.js';
 import { handleApiRequest } from '../../api/request-handler.js';
 
 const logger = createLogger('dev');
+
+/** Resolve the package root (where src/app/ lives) for Next.js */
+function getPackageRoot(): string {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  // In compiled form: dist/cli/commands/dev.js → go up 3 levels
+  // In tsx form: src/cli/commands/dev.ts → go up 3 levels
+  return path.resolve(__dirname, '..', '..', '..');
+}
 
 export async function startDev(): Promise<void> {
   console.log('Starting drop.js dev server...\n');
@@ -25,8 +35,9 @@ export async function startDev(): Promise<void> {
   let nextHandler: ((req: http.IncomingMessage, res: http.ServerResponse) => void) | null = null;
 
   if (!skipAdmin) {
+    const packageRoot = getPackageRoot();
     const next = (await import('next')).default as unknown as (opts: { dev: boolean; dir: string }) => any;
-    const nextApp = next({ dev: true, dir: process.cwd() });
+    const nextApp = next({ dev: true, dir: packageRoot });
     await nextApp.prepare();
     nextHandler = nextApp.getRequestHandler();
   }
@@ -157,8 +168,11 @@ async function seedDefaults(): Promise<void> {
   console.log('');
 }
 
-// Auto-invoke when run directly
-startDev().catch((err) => {
-  console.error('Failed to start dev server:', err);
-  process.exit(1);
-});
+// Auto-invoke when run directly (e.g., `npx tsx src/cli/commands/dev.ts`)
+const __filename_dev = fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename_dev || process.argv[1]?.endsWith('/dev.js')) {
+  startDev().catch((err) => {
+    console.error('Failed to start dev server:', err);
+    process.exit(1);
+  });
+}

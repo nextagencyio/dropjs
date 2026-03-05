@@ -1,10 +1,18 @@
 import http from 'node:http';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { destroyConnection } from '../../db/index.js';
 import { stopCron, stopQueueProcessor, createLogger } from '../../core/index.js';
 import { ensureInitialized } from '../../api/init.js';
 import { handleApiRequest } from '../../api/request-handler.js';
 
 const logger = createLogger('serve');
+
+/** Resolve the package root (where .next/ lives) for Next.js */
+function getPackageRoot(): string {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  return path.resolve(__dirname, '..', '..', '..');
+}
 
 export async function serve(): Promise<void> {
   console.log('Starting drop.js production server...\n');
@@ -17,8 +25,9 @@ export async function serve(): Promise<void> {
   console.log('Auth system initialized.');
 
   // Prepare Next.js in production mode
+  const packageRoot = getPackageRoot();
   const next = (await import('next')).default as unknown as (opts: { dev: boolean; dir: string }) => any;
-  const nextApp = next({ dev: false, dir: process.cwd() });
+  const nextApp = next({ dev: false, dir: packageRoot });
   await nextApp.prepare();
   const nextHandler = nextApp.getRequestHandler();
 
@@ -60,7 +69,10 @@ export async function serve(): Promise<void> {
 }
 
 // Auto-invoke when run directly
-serve().catch((err) => {
-  console.error('Failed to start production server:', err);
-  process.exit(1);
-});
+const __filename_serve = fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename_serve || process.argv[1]?.endsWith('/serve.js')) {
+  serve().catch((err) => {
+    console.error('Failed to start production server:', err);
+    process.exit(1);
+  });
+}

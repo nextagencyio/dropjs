@@ -24,7 +24,7 @@ import {
   createPasswordResetToken,
   resetPassword,
 } from '../auth/index.js';
-import { getAllEntityTypes, Entity } from '../core/index.js';
+import { getAllEntityTypes, Entity, sendPasswordResetEmail, sendContactNotification } from '../core/index.js';
 import { db } from '../db/index.js';
 import { BadRequestError, NotFoundError } from './errors.js';
 import { createContentType, updateContentType, deleteContentType } from './handlers/content-types.js';
@@ -254,8 +254,10 @@ export function buildRouteTable(): RouteEntry[] {
         const { email } = req.body as { email?: string };
         if (!email) { res.status(400).json({ error: { status: 400, message: 'email is required' } }); return; }
         const result = await createPasswordResetToken(email);
-        if (result) { logger.info('Password reset token generated', { uid: result.uid, token: result.token }); }
-        res.json({ message: 'If the email exists, a reset token has been generated. Check server logs.' });
+        if (result) {
+          await sendPasswordResetEmail(email, result.token);
+        }
+        res.json({ message: 'If the email exists, a password reset link has been sent.' });
       },
     },
     {
@@ -293,6 +295,18 @@ export function buildRouteTable(): RouteEntry[] {
     { method: 'PUT', pattern: '/api/entity-types/:entityType/:bundle/fields/reorder', middleware: adminNodes(), handler: reorderFields },
     { method: 'PATCH', pattern: '/api/entity-types/:entityType/:bundle/fields/:fieldName', middleware: adminNodes(), handler: updateField },
     { method: 'DELETE', pattern: '/api/entity-types/:entityType/:bundle/fields/:fieldName', middleware: adminNodes(), handler: deleteField },
+
+    // ── Public user profile (no auth required) ────────────────────────
+    {
+      method: 'GET', pattern: '/api/users/:uid/profile', skipCsrf: true,
+      handler: async (req: any, res: any) => {
+        const uid = parseInt(req.params.uid, 10);
+        if (isNaN(uid)) throw new BadRequestError('Invalid user ID');
+        const user = await loadUser(uid);
+        if (!user || !user.status) throw new NotFoundError('User not found');
+        res.json({ data: { uid: user.uid, name: user.name, created: user.created, roles: user.roles } });
+      },
+    },
 
     // ── Users ────────────────────────────────────────────────────────────
     {

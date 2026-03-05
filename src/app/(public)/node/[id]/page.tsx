@@ -19,6 +19,11 @@ interface NodeFull {
   [key: string]: unknown;
 }
 
+interface UserProfile {
+  uid: number;
+  name: string;
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
 }
@@ -77,6 +82,8 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
     );
   }
 
+  const userRes = node.uid ? await apiFetch<{ data: UserProfile }>(`/api/users/${node.uid}/profile`) : null;
+  const author = userRes?.data;
   const imageUrl = node.field_image?.large_url || node.field_image?.url;
 
   return (
@@ -84,6 +91,14 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{node.title}</h1>
         <div className="flex items-center gap-3 text-sm text-gray-500">
+          {author && (
+            <span>
+              By{' '}
+              <Link href={`/user/${author.uid}`} className="text-gin-primary hover:underline no-underline">
+                {author.name}
+              </Link>
+            </span>
+          )}
           <time>{formatDate(node.created)}</time>
           {node.type && (
             <span className="px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600 capitalize">

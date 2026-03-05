@@ -1,6 +1,7 @@
 import { authenticateUser, createUser } from './user.js';
 import { createSession, destroySession } from './session.js';
 import { floodRegister, floodIsAllowed, floodClear } from '../core/flood.js';
+import { sendRegistrationEmail } from '../core/mail.js';
 
 // Express-compatible types
 interface Req {
@@ -137,6 +138,10 @@ export async function registerHandler(req: Req, res: Res): Promise<void> {
       roles: isFirstUser ? ['authenticated', 'admin'] : ['authenticated'],
     });
     const session = await createSession(user.uid!);
+
+    // Send welcome email (fire-and-forget)
+    sendRegistrationEmail(email, name).catch(() => {});
+
     res.status(201).json({
       data: {
         user,

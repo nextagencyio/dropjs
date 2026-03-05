@@ -52,8 +52,11 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Token replacement** — `[type:name]` token system with 6 built-in types (node, user, site, date, current-date, random) for dynamic text substitution
 - **Authentication** — Users, roles, 21 permissions, entity-level access control, sessions, CSRF protection, rate limiting, registration, and password reset
 - **Drupal migration** — Read a Drupal database and migrate content directly
-- **E2E tested** — 323 Playwright tests across 34 specs covering the full stack
+- **E2E tested** — 362 Playwright tests across 39 specs covering the full stack
 - **Search API** — FTS5 full-text search with porter stemming across all entity types
+- **Rate limiting** — In-memory sliding window rate limiter (5/min auth, 30/min mutations, 100/min reads) with `X-RateLimit-*` headers
+- **HTTP caching** — `Cache-Control`, `ETag`, `Last-Modified` headers on file serving; CDN-friendly `s-maxage` + `stale-while-revalidate` for public API responses
+- **Environment config** — `.env` file support via `dotenv`, documented `.env.example` with all supported variables
 - **AI-native** — Every API surface designed to be discoverable and operable by AI coding agents
 
 ## Quick Start

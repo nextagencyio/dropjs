@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api-server';
+import Pager from '@/components/pager';
 
 interface TaxonomyTerm {
   tid: number;
@@ -39,8 +40,13 @@ export async function generateMetadata({ params }: { params: Promise<{ tid: stri
   return { title: term.name };
 }
 
-export default async function TaxonomyTermPage({ params }: { params: Promise<{ tid: string }> }) {
+const ITEMS_PER_PAGE = 20;
+
+export default async function TaxonomyTermPage({ params, searchParams }: { params: Promise<{ tid: string }>; searchParams: Promise<{ page?: string }> }) {
   const { tid } = await params;
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
+
   const termRes = await apiFetch<{ data: TaxonomyTerm }>(`/api/entity/taxonomy_term/${tid}`);
   const term = termRes?.data;
 
@@ -58,12 +64,12 @@ export default async function TaxonomyTermPage({ params }: { params: Promise<{ t
 
   // Load content tagged with this term
   const [articles, pages] = await Promise.all([
-    apiFetch<{ data: NodeTeaser[] }>('/api/node/article?filter[status]=1&sort=-created&page[limit]=50'),
-    apiFetch<{ data: NodeTeaser[] }>('/api/node/page?filter[status]=1&sort=-created&page[limit]=50'),
+    apiFetch<{ data: NodeTeaser[] }>('/api/node/article?filter[status]=1&sort=-created&page[limit]=200'),
+    apiFetch<{ data: NodeTeaser[] }>('/api/node/page?filter[status]=1&sort=-created&page[limit]=200'),
   ]);
 
   const all = [...(articles?.data || []), ...(pages?.data || [])];
-  const nodes = all
+  const filteredNodes = all
     .filter((n: any) => {
       const tags = n.field_tags;
       if (!Array.isArray(tags)) return false;
@@ -71,11 +77,15 @@ export default async function TaxonomyTermPage({ params }: { params: Promise<{ t
     })
     .sort((a, b) => b.created - a.created);
 
+  const totalItems = filteredNodes.length;
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const nodes = filteredNodes.slice(offset, offset + ITEMS_PER_PAGE);
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">{term.name}</h1>
 
-      {nodes.length === 0 ? (
+      {nodes.length === 0 && currentPage === 1 ? (
         <p className="text-gray-500">No content tagged with &ldquo;{term.name}&rdquo;.</p>
       ) : (
         <div>
@@ -100,6 +110,12 @@ export default async function TaxonomyTermPage({ params }: { params: Promise<{ t
               )}
             </article>
           ))}
+          <Pager
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            basePath={`/taxonomy/term/${tid}`}
+          />
         </div>
       )}
     </div>

@@ -84,6 +84,8 @@ export {
 export { createLogger, setLogLevel } from './logger.js';
 export type { Logger, LogLevel } from './logger.js';
 
+export { sendMail, sendPasswordResetEmail, sendContactNotification, sendRegistrationEmail } from './mail.js';
+
 export {
   ensureUrlAliasTable,
   createAlias,

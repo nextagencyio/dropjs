@@ -15,6 +15,7 @@ import { cors } from './cors.js';
 import { sanitizeMiddleware } from './sanitize.js';
 import { jsonApiMiddleware } from './jsonapi.js';
 import { csrfProtection } from './csrf.js';
+import { authLimiter, mutationLimiter, readLimiter } from './rate-limit.js';
 import { ensureInitialized } from './init.js';
 import {
   ensureWebhooksTable,
@@ -136,6 +137,19 @@ export async function handleApiRequest(
     // Parse body (JSON or multipart if upload route)
     await req.parseBody(uploadsDir);
 
+    // Apply rate limiting based on route type
+    let rateLimiter: MiddlewareFn;
+    if (req.path.startsWith('/api/auth')) {
+      rateLimiter = authLimiter as MiddlewareFn;
+    } else if (req.method === 'GET') {
+      rateLimiter = readLimiter as MiddlewareFn;
+    } else {
+      rateLimiter = mutationLimiter as MiddlewareFn;
+    }
+
+    const rlOk = await runMiddleware(req, res, [rateLimiter]);
+    if (!rlOk) return;
+
     // Build global middleware chain
     const globalMw: MiddlewareFn[] = [
       securityHeaders,
@@ -157,6 +171,16 @@ export async function handleApiRequest(
     if (route.middleware?.length) {
       const ok = await runMiddleware(req, res, route.middleware);
       if (!ok) return;
+    }
+
+    // Set cache headers for GET requests
+    if (req.method === 'GET' && !res.isSent) {
+      const isPublic = !req.user;
+      if (isPublic) {
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+      } else {
+        res.setHeader('Cache-Control', 'private, no-cache');
+      }
     }
 
     // Call handler

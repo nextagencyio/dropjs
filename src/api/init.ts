@@ -128,7 +128,7 @@ async function doInit(): Promise<void> {
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
         filename: process.env.DB_FILENAME,
-        ssl: process.env.DB_SSL === '1' ? { rejectUnauthorized: false } : undefined,
+        ssl: process.env.DB_SSL === '1' ? { rejectUnauthorized: true } : undefined,
       },
     };
   }

@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { getConnection } from './connection.js';
+import { getConnection, getDbClient } from './connection.js';
 
 export interface ColumnDefinition {
   type: 'serial' | 'int' | 'bigint' | 'float' | 'decimal' | 'varchar' | 'text' | 'boolean' | 'timestamp' | 'json' | 'blob';
@@ -126,6 +126,12 @@ export const schema = {
         }
       }
     });
+
+    // On PostgreSQL/Supabase: enable RLS and deny all access through PostgREST/realtime.
+    // The app connects as postgres (superuser) which bypasses RLS.
+    if (getDbClient() === 'pg') {
+      await conn.raw(`ALTER TABLE "${name}" ENABLE ROW LEVEL SECURITY`);
+    }
   },
 
   async dropTable(name: string): Promise<void> {

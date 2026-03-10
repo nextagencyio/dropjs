@@ -11,7 +11,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Entity/field system** — Content types with configurable fields, Drupal-compatible multi-table storage
 - **Revision system** — Every content change tracked with full revision history, diff, and revert
 - **Taxonomy system** — Vocabularies and terms with hierarchical parent-child relationships
-- **Database agnostic** — SQLite for dev, PostgreSQL/Supabase/MySQL for production — swap with one config change or `DATABASE_URL`
+- **Database agnostic** — SQLite for dev, PostgreSQL/Supabase for production — swap with one config change or `DATABASE_URL`
 - **Drupal schema compatibility** — Node/taxonomy tables mirror Drupal's structure exactly
 - **Auto-generated API** — Every entity type gets JSON:API and GraphQL endpoints automatically
 - **OpenAPI/Swagger** — Auto-generated API documentation at `/api/docs`
@@ -57,7 +57,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Drupal migration** — Read a Drupal database and migrate content directly
 - **E2E tested** — 382+ Playwright tests across 42 specs covering the full stack
 - **Unit tested** — 197 Vitest tests across 12 files
-- **Search API** — FTS5 full-text search with porter stemming across all entity types
+- **Search API** — Native full-text search (SQLite FTS5, PostgreSQL tsvector/tsquery) with porter stemming across all entity types
 - **Rate limiting** — In-memory sliding window rate limiter (5/min auth, 30/min mutations, 100/min reads) with `X-RateLimit-*` headers
 - **HTTP caching** — `Cache-Control`, `ETag`, `Last-Modified` headers on file serving; CDN-friendly `s-maxage` + `stale-while-revalidate` for public API responses
 - **Environment config** — `.env` file support via `dotenv`, documented `.env.example` with all supported variables
@@ -90,7 +90,7 @@ src/
 ├── auth/         Users, roles, permissions, sessions, CSRF, rate limiting
 ├── cli/          CLI commands (dev, serve, migrate)
 ├── core/         Entity system, config, event bus, cron, Views, cache, mail, Drupal compat
-├── db/           Database abstraction (SQLite via Knex), schema management
+├── db/           Database abstraction (Knex — SQLite, PostgreSQL), schema management
 ├── field/        18 field type definitions, storage engine with revision tables
 ├── modules/      Drupal-style modules (GraphQL, JSON:API, GraphQL Compose)
 ├── migrate/      Drupal-to-drop.js migration tools
@@ -368,7 +368,7 @@ The React admin panel (Next.js 15 / React 19) provides a full management interfa
 // drop.config.js
 export default {
   database: {
-    client: 'sqlite3',              // or 'mysql2', 'pg'
+    client: 'sqlite3',              // or 'pg'
     connection: {
       filename: './data/drop.db'    // or { host, user, password, database }
     }
@@ -569,9 +569,9 @@ CI runs type checking, unit tests, and E2E tests on every push and PR via GitHub
 │ field    │  Users · Roles · ACL │   migrate     │
 ├──────────┴──────────────────────┴───────────────┤
 │               src/db (Knex)                      │
-├──────────┬──────────┬───────────────────────────┤
-│  SQLite  │  MySQL   │  PostgreSQL               │
-└──────────┴──────────┴───────────────────────────┘
+├─────────────────┬───────────────────────────────┤
+│     SQLite      │       PostgreSQL              │
+└─────────────────┴───────────────────────────────┘
 ```
 
 ## License

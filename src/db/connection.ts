@@ -30,6 +30,9 @@ export function createConnection(config: DropDbConfig = DEFAULT_CONFIG): Knex {
     client: config.client,
     connection: config.connection,
     useNullAsDefault: config.client === 'sqlite3',
+    ...(config.client === 'pg' ? {
+      pool: { min: 2, max: 10, acquireTimeoutMillis: 30000, idleTimeoutMillis: 30000 },
+    } : {}),
   };
 
   g.__dropjs_db = knex(knexConfig);

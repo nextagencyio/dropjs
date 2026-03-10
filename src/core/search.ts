@@ -49,6 +49,7 @@ export async function ensureSearchIndex(): Promise<boolean> {
           table.primary(['entity_type', 'entity_id']);
         });
         await conn.raw('CREATE INDEX IF NOT EXISTS search_index_tsv_idx ON search_index USING gin(tsv)');
+        await conn.raw('ALTER TABLE "search_index" ENABLE ROW LEVEL SECURITY');
       }
       setFtsAvailable(true);
       setSearchBackend('pg');
@@ -173,15 +174,14 @@ export async function searchIndex(
     if (!safeQuery) return [];
 
     if (backend === 'pg') {
-      // PostgreSQL: tsquery search with ts_rank
-      const tsQuery = safeQuery.split(/\s+/).map(w => w + ':*').join(' & ');
+      // PostgreSQL: use plainto_tsquery for safe parameterized search
       let sql = `
         SELECT entity_type, bundle, entity_id, title,
-               ts_rank(tsv, to_tsquery('english', ?)) AS rank
+               ts_rank(tsv, plainto_tsquery('english', ?)) AS rank
         FROM search_index
-        WHERE tsv @@ to_tsquery('english', ?)
+        WHERE tsv @@ plainto_tsquery('english', ?)
       `;
-      const params: unknown[] = [tsQuery, tsQuery];
+      const params: unknown[] = [safeQuery, safeQuery];
 
       if (options.entityType) {
         sql += ` AND entity_type = ?`;

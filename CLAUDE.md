@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Node.js CMS framework inspired by Drupal 11. The data layer is portable — the same database schema works in both Node.js and Drupal 11 (SQLite, PostgreSQL/Supabase, MySQL).
+A Node.js CMS framework inspired by Drupal 11. The data layer is portable — the same database schema works in both Node.js and Drupal 11 (SQLite, PostgreSQL/Supabase).
 
 ## Commands
 
@@ -24,7 +24,7 @@ src/api/          REST API, request handling, middleware, OpenAPI, GraphQL
 src/auth/         Users, roles, permissions, sessions, CSRF, rate limiting
 src/core/         Entity system, config, event bus, cron, Views, cache, Drupal compat
 src/field/        18 field types, storage engine, validation, revision tables
-src/db/           Database abstraction (Knex), SQLite/MySQL/PostgreSQL
+src/db/           Database abstraction (Knex), SQLite/PostgreSQL
 src/cli/          CLI commands (dev, serve, build, migrate)
 src/bin/          CLI entry point (drop.ts → commander)
 src/app/          Next.js admin UI + public frontend (React 19, App Router)

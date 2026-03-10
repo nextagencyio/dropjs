@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { getConnection } from './connection.js';
+import { getConnection, getDbClient } from './connection.js';
 
 type Operator = '=' | '!=' | '<' | '<=' | '>' | '>=' | 'IN' | 'NOT IN' | 'LIKE' | 'IS NULL' | 'IS NOT NULL' | 'BETWEEN';
 
@@ -92,17 +92,42 @@ export class SelectQuery {
 
 export class InsertQuery {
   private knexQuery: Knex.QueryBuilder;
+  private insertedKeys: Set<string> = new Set();
 
   constructor(private table: string) {
     this.knexQuery = getConnection()(table);
   }
 
   values(data: Record<string, unknown> | Record<string, unknown>[]): this {
+    // Track which columns were explicitly set so we can identify auto-generated ones
+    if (Array.isArray(data)) {
+      if (data.length > 0) {
+        for (const key of Object.keys(data[0])) this.insertedKeys.add(key);
+      }
+    } else {
+      for (const key of Object.keys(data)) this.insertedKeys.add(key);
+    }
     this.knexQuery = this.knexQuery.insert(data);
     return this;
   }
 
   async execute(): Promise<number[]> {
+    const client = getDbClient();
+    if (client === 'pg') {
+      // PostgreSQL requires RETURNING to get auto-increment IDs
+      const rows = await this.knexQuery.returning('*');
+      return (rows as Record<string, unknown>[]).map((row) => {
+        // Return the auto-generated column (not in the original insert data)
+        for (const [key, val] of Object.entries(row)) {
+          if (typeof val === 'number' && !this.insertedKeys.has(key)) return val;
+        }
+        // Fallback: return first numeric value
+        for (const val of Object.values(row)) {
+          if (typeof val === 'number') return val;
+        }
+        return 0;
+      });
+    }
     return this.knexQuery as unknown as Promise<number[]>;
   }
 }

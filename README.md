@@ -11,7 +11,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Entity/field system** — Content types with configurable fields, Drupal-compatible multi-table storage
 - **Revision system** — Every content change tracked with full revision history, diff, and revert
 - **Taxonomy system** — Vocabularies and terms with hierarchical parent-child relationships
-- **Database agnostic** — SQLite for dev, MySQL/PostgreSQL for production — swap with one config change
+- **Database agnostic** — SQLite for dev, PostgreSQL/Supabase/MySQL for production — swap with one config change or `DATABASE_URL`
 - **Drupal schema compatibility** — Node/taxonomy tables mirror Drupal's structure exactly
 - **Auto-generated API** — Every entity type gets JSON:API and GraphQL endpoints automatically
 - **OpenAPI/Swagger** — Auto-generated API documentation at `/api/docs`
@@ -376,6 +376,28 @@ export default {
 }
 ```
 
+### Supabase / PostgreSQL
+
+Set `DATABASE_URL` to connect to Supabase or any PostgreSQL host:
+
+```bash
+DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+```
+
+Or use individual environment variables:
+
+```bash
+DB_CLIENT=pg
+DB_HOST=aws-0-us-east-1.pooler.supabase.com
+DB_PORT=6543
+DB_USER=postgres.your-ref
+DB_PASSWORD=your-password
+DB_NAME=postgres
+DB_SSL=1
+```
+
+The same Drupal-compatible schema (entity tables, field storage, config, cache bins) is created in PostgreSQL — matching Drupal's PostgreSQL database driver. Full-text search uses PostgreSQL's native `tsvector`/`tsquery` with GIN indexes instead of SQLite's FTS5.
+
 ## Field Types
 
 18 built-in field types:
@@ -509,6 +531,8 @@ CI runs type checking, unit tests, and E2E tests on every push and PR via GitHub
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | API server port | `3000` |
+| `DATABASE_URL` | PostgreSQL connection string (Supabase, Railway, etc.) | — |
+| `DB_SSL` | Enable SSL for database connection (`1`) | — |
 | `DROP_DATA_DIR` | Data directory path | `./data` |
 | `DROP_DISABLE_RATE_LIMIT` | Disable rate limiting (`1`) | — |
 | `DROP_CLEAN_DB` | Clean DB on startup (for E2E) | — |

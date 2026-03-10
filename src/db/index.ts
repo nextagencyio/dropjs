@@ -1,4 +1,4 @@
-export { createConnection, getConnection, destroyConnection, initDb } from './connection.js';
+export { createConnection, getConnection, destroyConnection, initDb, getDbClient } from './connection.js';
 export type { DropDbConfig } from './connection.js';
 
 export { db, SelectQuery, InsertQuery, UpdateQuery, DeleteQuery, TransactionQuery } from './query-builder.js';

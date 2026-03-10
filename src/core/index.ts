@@ -195,6 +195,7 @@ export {
   removeFromIndex,
   searchIndex,
   isFtsAvailable,
+  getActiveSearchBackend,
   rebuildSearchIndex,
   registerSearchHooks,
 } from './search.js';

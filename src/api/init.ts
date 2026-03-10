@@ -110,8 +110,15 @@ async function doInit(): Promise<void> {
     }
   }
 
+  // DATABASE_URL connection string (Supabase, Heroku, Railway, etc.)
+  if (process.env.DATABASE_URL) {
+    dbConfig = {
+      client: 'pg',
+      connection: process.env.DATABASE_URL,
+    };
+  }
   // Environment-based database config (for production / Docker)
-  if (process.env.DB_CLIENT) {
+  else if (process.env.DB_CLIENT) {
     dbConfig = {
       client: process.env.DB_CLIENT,
       connection: {
@@ -121,6 +128,7 @@ async function doInit(): Promise<void> {
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
         filename: process.env.DB_FILENAME,
+        ssl: process.env.DB_SSL === '1' ? { rejectUnauthorized: false } : undefined,
       },
     };
   }

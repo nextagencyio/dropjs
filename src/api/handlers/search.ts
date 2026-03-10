@@ -1,5 +1,5 @@
 import type { Request, Response } from '../types.js';
-import { Entity, getAllEntityTypes, searchIndex, isFtsAvailable } from '../../core/index.js';
+import { Entity, getAllEntityTypes, searchIndex, isFtsAvailable, getActiveSearchBackend } from '../../core/index.js';
 import { BadRequestError } from '../errors.js';
 
 export async function handleSearch(
@@ -36,7 +36,7 @@ export async function handleSearch(
         meta: {
           query: q,
           total: ftsResults.length,
-          engine: 'fts5',
+          engine: getActiveSearchBackend(),
         },
       });
       return;

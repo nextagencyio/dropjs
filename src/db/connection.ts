@@ -9,7 +9,8 @@ export interface DropDbConfig {
     user?: string;
     password?: string;
     database?: string;
-  };
+    ssl?: { rejectUnauthorized: boolean } | boolean;
+  } | string; // connection string (e.g. DATABASE_URL)
 }
 
 const DEFAULT_CONFIG: DropDbConfig = {
@@ -22,7 +23,7 @@ const DEFAULT_CONFIG: DropDbConfig = {
 // Use globalThis to share the DB connection across webpack module boundaries.
 // Next.js server components get a separate module instance from the API handler,
 // so a plain module-scoped variable would create duplicate connections.
-const g = globalThis as unknown as { __dropjs_db?: Knex | null };
+const g = globalThis as unknown as { __dropjs_db?: Knex | null; __dropjs_db_client?: string };
 
 export function createConnection(config: DropDbConfig = DEFAULT_CONFIG): Knex {
   const knexConfig: Knex.Config = {
@@ -32,7 +33,12 @@ export function createConnection(config: DropDbConfig = DEFAULT_CONFIG): Knex {
   };
 
   g.__dropjs_db = knex(knexConfig);
+  g.__dropjs_db_client = config.client;
   return g.__dropjs_db;
+}
+
+export function getDbClient(): string {
+  return g.__dropjs_db_client ?? 'sqlite3';
 }
 
 export function getConnection(): Knex {

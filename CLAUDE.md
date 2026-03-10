@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Node.js CMS framework inspired by Drupal 11. The data layer is portable — the same SQLite database works in both Node.js and Drupal 11.
+A Node.js CMS framework inspired by Drupal 11. The data layer is portable — the same database schema works in both Node.js and Drupal 11 (SQLite, PostgreSQL/Supabase, MySQL).
 
 ## Commands
 

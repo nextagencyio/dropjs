@@ -34,7 +34,7 @@ function applyColumn(table: Knex.CreateTableBuilder, name: string, def: ColumnDe
   switch (def.type) {
     case 'serial':
       if (hasCompositePK) {
-        // For composite PKs, serial columns are just regular integers (SQLite limitation)
+        // Knex's .increments() always sets PRIMARY KEY on the column, conflicting with composite PKs
         col = table.integer(name).unsigned().notNullable();
         break;
       }

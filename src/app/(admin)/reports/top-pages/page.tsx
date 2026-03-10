@@ -1,39 +1,17 @@
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { fetchTopPages, type TopPageEntry } from '@/lib/api-system';
+import { getTopPages } from '@/lib/server/data';
+import { PeriodSelector } from './period-selector';
 
-const PERIOD_OPTIONS = [
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: '30d', label: 'Last 30 days' },
-  { value: 'all', label: 'All time' },
-];
+export default async function TopPagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const period = (typeof params.period === 'string' ? params.period : '') || '7d';
 
-export default function TopPagesPage() {
-  const [pages, setPages] = useState<TopPageEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [period, setPeriod] = useState('7d');
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetchTopPages(period);
-      setPages(res.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load top pages');
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
+  const result = await getTopPages(period);
+  const pages = result.data;
   const maxHits = pages.length > 0 ? Math.max(...pages.map((p) => p.hits)) : 1;
 
   return (
@@ -53,34 +31,10 @@ export default function TopPagesPage() {
         Top pages
       </h1>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-gin-s text-sm">
-          {error}
-        </div>
-      )}
-
       {/* Period filter */}
-      <div className="flex gap-2 mb-4">
-        {PERIOD_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => setPeriod(opt.value)}
-            className={`px-3 py-1.5 text-sm rounded-gin-s border transition-colors ${
-              period === opt.value
-                ? 'bg-gin-primary text-white border-gin-primary'
-                : 'bg-white text-gin-text border-gin-border hover:bg-gin-bg-layer2'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      <PeriodSelector currentPeriod={period} />
 
-      {loading ? (
-        <div className="bg-white border border-gin-border rounded-gin p-8 text-center text-gin-text-light">
-          Loading...
-        </div>
-      ) : pages.length === 0 ? (
+      {pages.length === 0 ? (
         <div className="bg-white border border-gin-border rounded-gin p-8 text-center text-gin-text-light">
           No page views recorded for this period.
         </div>

@@ -1,5 +1,5 @@
 /**
- * Core API request dispatcher — replaces Express for /api/* requests.
+ * Core API request dispatcher for /api/* requests.
  *
  * Called from http.createServer in dev.ts/serve.ts.
  * Creates adapted req/res, runs middleware chain, matches route, calls handler.
@@ -15,66 +15,24 @@ import { cors } from './cors.js';
 import { sanitizeMiddleware } from './sanitize.js';
 import { jsonApiMiddleware } from './jsonapi.js';
 import { csrfProtection } from './csrf.js';
+import { getModule, isModuleEnabled, onModuleChange, createLogger } from '../core/index.js';
 import { authLimiter, mutationLimiter, readLimiter } from './rate-limit.js';
 import { ensureInitialized } from './init.js';
-import {
-  ensureWebhooksTable,
-  ensureWatchdogTable,
-  ensureAccessLogTable,
-  ensureKeyValueTable,
-  ensureQueueTable,
-  ensureCommentTables,
-  ensureParagraphsTable,
-  registerParagraphHooks,
-  ensurePreviewTable,
-  registerPreviewCleanupCronJob,
-  ensureActionTriggersTable,
-  registerDefaultActions,
-  registerTriggerHooks,
-  ensureContactTables,
-  ensureShortcutTables,
-  registerDefaultTokens,
-  createLogger,
-} from '../core/index.js';
 
 const logger = createLogger('api:handler');
 
 // Lazy-built route table
 let routes: RouteEntry[] | null = null;
-let subsystemsEnsured = false;
+
+// Invalidate route cache when modules change
+onModuleChange(() => { routes = null; });
 
 /**
- * Ensure subsystem tables exist (run once, parallel, fire-and-forget like server.ts).
+ * Reset the cached route table. Called when modules are installed/uninstalled
+ * so that module-contributed routes are picked up on the next request.
  */
-async function ensureSubsystemTables(): Promise<void> {
-  if (subsystemsEnsured) return;
-  subsystemsEnsured = true;
-
-  // These mirror the table-creation calls in createApiServer()
-  const tasks = [
-    ensureWebhooksTable(),
-    ensureWatchdogTable(),
-    ensureAccessLogTable(),
-    ensureKeyValueTable(),
-    ensureQueueTable(),
-    ensureCommentTables(),
-    ensureParagraphsTable(),
-    ensurePreviewTable(),
-    ensureActionTriggersTable(),
-    ensureContactTables(),
-    ensureShortcutTables(),
-  ];
-
-  await Promise.all(tasks.map((p) => p.catch((err) => {
-    logger.error('Failed to ensure subsystem table', { error: String(err) });
-  })));
-
-  // Register hooks and default data (sync, idempotent)
-  registerParagraphHooks();
-  registerPreviewCleanupCronJob();
-  registerDefaultActions();
-  registerTriggerHooks();
-  registerDefaultTokens();
+export function resetRouteTable(): void {
+  routes = null;
 }
 
 // Global middleware instances (created once)
@@ -107,7 +65,6 @@ export async function handleApiRequest(
   try {
     // Ensure DB and subsystems are initialized
     await ensureInitialized();
-    await ensureSubsystemTables();
 
     // Build route table on first request
     if (!routes) {
@@ -155,7 +112,11 @@ export async function handleApiRequest(
       securityHeaders,
       corsMiddleware as MiddlewareFn,
       sanitize as MiddlewareFn,
-      jsonApiMiddleware as MiddlewareFn,
+      // JSON:API middleware: use module-contributed middleware when the jsonapi module is enabled,
+      // otherwise fall back to the hardcoded middleware for backward compatibility.
+      ...(isModuleEnabled('jsonapi')
+        ? (getModule('jsonapi')?.middleware ?? []) as MiddlewareFn[]
+        : [jsonApiMiddleware as MiddlewareFn]),
     ];
 
     // Add CSRF protection (skip for safe methods, exempt routes, and Bearer auth)
@@ -175,8 +136,12 @@ export async function handleApiRequest(
 
     // Set cache headers for GET requests
     if (req.method === 'GET' && !res.isSent) {
-      const isPublic = !req.user;
-      if (isPublic) {
+      const isAdmin = req.url?.startsWith('/api/entity-types') ||
+        req.url?.startsWith('/api/config') ||
+        req.url?.startsWith('/api/modules');
+      if (isAdmin) {
+        res.setHeader('Cache-Control', 'no-store');
+      } else if (!req.user) {
         res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
       } else {
         res.setHeader('Cache-Control', 'private, no-cache');

@@ -171,7 +171,7 @@ export async function createContactForm(data: {
     recipients: JSON.stringify(data.recipients ?? []),
     message: data.message ?? null,
     weight: data.weight ?? 0,
-    status: data.status !== false ? 1 : 0,
+    status: (data.status ?? true) ? 1 : 0,
   }).execute();
 
   return {
@@ -182,7 +182,7 @@ export async function createContactForm(data: {
     recipients: data.recipients ?? [],
     message: data.message,
     weight: data.weight ?? 0,
-    status: data.status !== false,
+    status: Boolean(data.status ?? true),
   };
 }
 

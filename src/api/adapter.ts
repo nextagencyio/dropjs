@@ -1,9 +1,9 @@
 /**
- * Express-compatible adapter for Node.js http.IncomingMessage / ServerResponse.
+ * Adapter layer for Node.js http.IncomingMessage / ServerResponse.
  *
  * Provides req.params, req.query, req.body, req.cookies, req.user, req.file,
  * res.json(), res.status(), res.send(), res.sendFile(), res.redirect(), res.cookie()
- * so existing Express handlers work unchanged.
+ * matching the Request/Response interfaces in types.ts.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -308,7 +308,7 @@ export class AdaptedRequest {
     }
   }
 
-  /** Express-compatible header accessor. */
+  /** Header accessor. */
   get(name: string): string | undefined {
     const val = this.headers[name.toLowerCase()];
     return typeof val === 'string' ? val : Array.isArray(val) ? val[0] : undefined;
@@ -412,7 +412,7 @@ export class AdaptedResponse {
     this._raw.end(body);
   }
 
-  /** End the response (like Express res.end()). */
+  /** End the response. */
   end(): void {
     if (this._sent) return;
     this._sent = true;

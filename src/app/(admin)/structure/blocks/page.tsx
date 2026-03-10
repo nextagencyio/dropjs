@@ -1,13 +1,8 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  fetchBlockPlacements,
-  updateBlockPlacement,
-  deleteBlockPlacement,
-  type BlockPlacement,
-} from '@/lib/api-system';
+import { getBlockPlacements } from '@/lib/server/data';
+import { requirePermission } from '@/lib/server/auth';
+import { DeleteBlockButton, ToggleBlockStatusButton } from './_components/blocks-client';
+import type { BlockPlacement } from '@/lib/server/data';
 
 const DEFAULT_REGIONS = [
   { id: 'header', label: 'Header' },
@@ -20,72 +15,9 @@ const DEFAULT_REGIONS = [
   { id: 'footer', label: 'Footer' },
 ];
 
-export default function BlockListPage() {
-  const [placements, setPlacements] = useState<BlockPlacement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  const loadPlacements = () => {
-    setLoading(true);
-    fetchBlockPlacements()
-      .then((data) => {
-        setPlacements(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load block placements');
-        setLoading(false);
-      });
-  };
-
-  useEffect(() => {
-    loadPlacements();
-  }, []);
-
-  const handleDelete = async (placementId: string, label?: string) => {
-    if (!confirm(`Delete the "${label || placementId}" block placement?`)) return;
-    setError('');
-    setSuccess('');
-    try {
-      await deleteBlockPlacement(placementId);
-      setSuccess('Block placement deleted.');
-      loadPlacements();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete block placement');
-    }
-  };
-
-  const handleToggleStatus = async (placement: BlockPlacement) => {
-    setError('');
-    try {
-      await updateBlockPlacement(placement.id, { status: !placement.status });
-      loadPlacements();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle block status');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div>
-        <div className="h-8 w-40 animate-pulse bg-gin-bg-layer2 rounded-gin-s mb-5" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="mb-6">
-            <div className="h-6 w-32 animate-pulse bg-gin-bg-layer2 rounded-gin-s mb-2" />
-            <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-              <div className="bg-gin-bg-layer2 px-4 py-3">
-                <div className="h-4 w-full animate-pulse bg-gin-bg-app rounded-gin-s" />
-              </div>
-              <div className="px-4 py-3 border-t border-gin-border">
-                <div className="h-4 w-3/4 animate-pulse bg-gin-bg-layer2 rounded-gin-s" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+export default async function BlockListPage() {
+  await requirePermission('administer blocks');
+  const placements = await getBlockPlacements();
 
   // Group placements by region
   const placementsByRegion: Record<string, BlockPlacement[]> = {};
@@ -139,17 +71,6 @@ export default function BlockListPage() {
         </Link>
       </div>
 
-      {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-gin-danger rounded-gin-s px-4 py-3 text-sm">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="mb-4 bg-emerald-50 border border-emerald-200 text-gin-green rounded-gin-s px-4 py-3 text-sm">
-          {success}
-        </div>
-      )}
-
       {allRegions.map((region) => (
         <div key={region.id} className="mb-6">
           <h2 className="text-base font-semibold text-gin-title mb-2">{region.label}</h2>
@@ -169,22 +90,16 @@ export default function BlockListPage() {
                 {(placementsByRegion[region.id] || []).map((placement) => (
                   <tr key={placement.id} className="hover:bg-gin-bg-layer2/50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gin-text border-t border-gin-border font-medium">
-                      {placement.label || placement.block_id}
+                      {(placement as any).label || placement.blockId}
                     </td>
                     <td className="px-4 py-3 text-sm text-gin-text-light border-t border-gin-border">{placement.region}</td>
                     <td className="px-4 py-3 text-sm text-gin-text-light border-t border-gin-border">{placement.theme}</td>
                     <td className="px-4 py-3 text-sm text-center text-gin-text-light border-t border-gin-border">{placement.weight}</td>
                     <td className="px-4 py-3 text-sm text-center border-t border-gin-border">
-                      <button
-                        onClick={() => handleToggleStatus(placement)}
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          placement.status
-                            ? 'bg-emerald-50 text-gin-green'
-                            : 'bg-gray-100 text-gin-text-light'
-                        }`}
-                      >
-                        {placement.status ? 'Enabled' : 'Disabled'}
-                      </button>
+                      <ToggleBlockStatusButton
+                        placementId={placement.id}
+                        status={!!placement.status}
+                      />
                     </td>
                     <td className="px-4 py-3 text-sm text-right border-t border-gin-border space-x-3">
                       <Link
@@ -193,12 +108,10 @@ export default function BlockListPage() {
                       >
                         Edit
                       </Link>
-                      <button
-                        onClick={() => handleDelete(placement.id, placement.label)}
-                        className="text-sm text-gin-danger hover:underline"
-                      >
-                        Delete
-                      </button>
+                      <DeleteBlockButton
+                        placementId={placement.id}
+                        label={(placement as any).label}
+                      />
                     </td>
                   </tr>
                 ))}

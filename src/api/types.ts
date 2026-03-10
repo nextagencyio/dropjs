@@ -1,6 +1,5 @@
 /**
  * Framework-agnostic request/response types used by all API handlers and middleware.
- * Compatible with both the AdaptedRequest/AdaptedResponse (production) and Express (tests).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -19,8 +18,6 @@ export interface Request {
   ip?: string;
   isAuthenticated?: boolean;
   get(name: string): string | undefined;
-  /** Express app reference — only available in test/Express context */
-  app?: any;
 }
 
 export interface Response {

@@ -123,7 +123,7 @@ function sanitizeValue(value: unknown): unknown {
 }
 
 /**
- * Express middleware that sanitizes HTML in request bodies on state-changing requests.
+ * Middleware that sanitizes HTML in request bodies on state-changing requests.
  * Only applies to POST, PATCH, PUT methods with JSON bodies.
  */
 export function sanitizeMiddleware() {

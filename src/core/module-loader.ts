@@ -6,15 +6,39 @@ import * as path from 'node:path';
 
 type EventHandler = (data: unknown, context?: unknown) => Promise<void> | void;
 
+/**
+ * A route contributed by a module.
+ */
+export interface ModuleRoute {
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  pattern: string;
+  handler: (req: any, res: any) => void | Promise<void>;
+  middleware?: any[];
+  skipCsrf?: boolean;
+  isUpload?: boolean;
+}
+
+/**
+ * A middleware contributed by a module (inserted into the global middleware chain).
+ */
+export type ModuleMiddleware = (req: any, res: any, next: (err?: unknown) => void) => void;
+
 export interface ModuleDefinition {
   name: string;
   version: string;
   label: string;
   description?: string;
+  package?: string;
   dependencies?: string[];
 
   install?: (context: ModuleContext) => Promise<void>;
   uninstall?: (context: ModuleContext) => Promise<void>;
+
+  /** Routes this module contributes to the API. */
+  routes?: ModuleRoute[] | (() => ModuleRoute[]);
+
+  /** Global middleware this module contributes. */
+  middleware?: ModuleMiddleware[];
 
   events?: Record<string, EventHandler>;
 }
@@ -32,6 +56,23 @@ interface LoadedModule {
 }
 
 const moduleRegistry = new Map<string, LoadedModule>();
+
+// Callbacks invoked when modules change (e.g. route table / middleware cache invalidation).
+const onModuleChangeCallbacks: Array<() => void> = [];
+
+/**
+ * Register a callback that fires when modules are installed or uninstalled.
+ * Multiple callbacks can be registered; all will be called.
+ */
+export function onModuleChange(callback: () => void): void {
+  onModuleChangeCallbacks.push(callback);
+}
+
+function notifyModuleChange(): void {
+  // Invalidate cached middleware
+  cachedModuleMiddleware = null;
+  for (const cb of onModuleChangeCallbacks) cb();
+}
 
 function createModuleContext(): ModuleContext {
   return {
@@ -75,6 +116,7 @@ export async function loadModule(definition: ModuleDefinition): Promise<void> {
   }
 
   moduleRegistry.set(definition.name, { definition, enabled: true });
+  notifyModuleChange();
 }
 
 export async function installModule(definition: ModuleDefinition): Promise<void> {
@@ -103,6 +145,7 @@ export async function uninstallModule(name: string): Promise<void> {
   }
 
   moduleRegistry.delete(name);
+  notifyModuleChange();
 }
 
 export function getModule(name: string): ModuleDefinition | undefined {
@@ -137,6 +180,9 @@ const CORE_MODULES: CoreModuleInfo[] = [
   { name: 'options', label: 'Options', description: 'List and select field types with allowed values', version: '0.1.0', package: 'Core', required: false },
   { name: 'path', label: 'Path', description: 'URL aliases for content', version: '0.1.0', package: 'Core', required: false },
   { name: 'webhook', label: 'Webhook', description: 'Event-driven webhook notifications', version: '0.1.0', package: 'Core', required: false },
+  { name: 'graphql', label: 'GraphQL', description: 'GraphQL API with auto-generated schema from entity types', version: '0.1.0', package: 'Web services', required: false },
+  { name: 'jsonapi', label: 'JSON:API', description: 'JSON:API 1.0 format for REST responses', version: '0.1.0', package: 'Web services', required: false },
+  { name: 'graphql_compose', label: 'GraphQL Compose', description: 'Composable GraphQL schema with graphql-compose', version: '0.1.0', package: 'Web services', required: false },
 ];
 
 export function getAllModules(): CoreModuleInfo[] {
@@ -148,10 +194,55 @@ export function getAllModules(): CoreModuleInfo[] {
       label: m.definition.label,
       description: m.definition.description ?? '',
       version: m.definition.version,
-      package: 'Custom',
+      package: m.definition.package ?? 'Custom',
       required: false,
     }));
   return [...CORE_MODULES, ...userModules];
+}
+
+/**
+ * Collect all routes contributed by enabled modules.
+ */
+export function getModuleRoutes(): ModuleRoute[] {
+  const routes: ModuleRoute[] = [];
+  for (const loaded of moduleRegistry.values()) {
+    if (!loaded.enabled) continue;
+    const def = loaded.definition;
+    if (def.routes) {
+      const moduleRoutes = typeof def.routes === 'function' ? def.routes() : def.routes;
+      routes.push(...moduleRoutes);
+    }
+  }
+  return routes;
+}
+
+// Cached module middleware (invalidated on module change via notifyModuleChange)
+let cachedModuleMiddleware: ModuleMiddleware[] | null = null;
+
+/**
+ * Collect all global middleware contributed by enabled modules.
+ * Result is cached and invalidated when modules change.
+ */
+export function getModuleMiddleware(): ModuleMiddleware[] {
+  if (cachedModuleMiddleware) return cachedModuleMiddleware;
+  const mw: ModuleMiddleware[] = [];
+  for (const loaded of moduleRegistry.values()) {
+    if (!loaded.enabled) continue;
+    const def = loaded.definition;
+    if (def.middleware) {
+      mw.push(...def.middleware);
+    }
+  }
+  cachedModuleMiddleware = mw;
+  return mw;
+}
+
+/**
+ * Check if a module is enabled.
+ */
+export function isModuleEnabled(name: string): boolean {
+  const loaded = moduleRegistry.get(name);
+  return loaded?.enabled ?? false;
 }
 
 /**
@@ -175,4 +266,5 @@ export async function loadEntityTypesFromDir(dir: string): Promise<void> {
 
 export function clearModuleRegistry(): void {
   moduleRegistry.clear();
+  cachedModuleMiddleware = null;
 }

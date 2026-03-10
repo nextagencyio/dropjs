@@ -3,7 +3,7 @@ import { createSession, destroySession } from './session.js';
 import { floodRegister, floodIsAllowed, floodClear } from '../core/flood.js';
 import { sendRegistrationEmail } from '../core/mail.js';
 
-// Express-compatible types
+// Request/response types for auth routes
 interface Req {
   body?: Record<string, unknown>;
   headers: Record<string, string | string[] | undefined>;
@@ -15,6 +15,33 @@ interface Res {
   status(code: number): Res;
   json(data: unknown): void;
   send(data?: unknown): void;
+  setHeader?(name: string, value: string): void;
+}
+
+/**
+ * Set the dropjs_session HttpOnly cookie alongside the Bearer token response.
+ * This allows Next.js Server Components and Server Actions to authenticate
+ * via cookies while external clients continue using Bearer tokens.
+ */
+function setSessionCookie(res: Res, token: string, expires: string): void {
+  if (!res.setHeader) return;
+  const expiresDate = new Date(expires).toUTCString();
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `dropjs_session=${token}; Path=/; HttpOnly; SameSite=Lax; Expires=${expiresDate}${secure}`,
+  );
+}
+
+/**
+ * Clear the dropjs_session cookie on logout.
+ */
+function clearSessionCookie(res: Res): void {
+  if (!res.setHeader) return;
+  res.setHeader(
+    'Set-Cookie',
+    'dropjs_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+  );
 }
 
 // Flood thresholds (matches Drupal defaults)
@@ -84,6 +111,7 @@ export async function loginHandler(req: Req, res: Res): Promise<void> {
   await floodClear('user.failed_login_user', name);
 
   const session = await createSession(user.uid!);
+  setSessionCookie(res, session.token, session.expires!);
   res.json({
     data: {
       user,
@@ -103,6 +131,7 @@ export async function logoutHandler(req: Req, res: Res): Promise<void> {
     const token = authHeader.slice(7);
     await destroySession(token);
   }
+  clearSessionCookie(res);
   res.status(204).send();
 }
 
@@ -142,6 +171,7 @@ export async function registerHandler(req: Req, res: Res): Promise<void> {
     // Send welcome email (fire-and-forget)
     sendRegistrationEmail(email, name).catch(() => {});
 
+    setSessionCookie(res, session.token, session.expires!);
     res.status(201).json({
       data: {
         user,

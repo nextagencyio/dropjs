@@ -19,7 +19,10 @@ const DEFAULT_CONFIG: DropDbConfig = {
   },
 };
 
-let instance: Knex | null = null;
+// Use globalThis to share the DB connection across webpack module boundaries.
+// Next.js server components get a separate module instance from the API handler,
+// so a plain module-scoped variable would create duplicate connections.
+const g = globalThis as unknown as { __dropjs_db?: Knex | null };
 
 export function createConnection(config: DropDbConfig = DEFAULT_CONFIG): Knex {
   const knexConfig: Knex.Config = {
@@ -28,27 +31,27 @@ export function createConnection(config: DropDbConfig = DEFAULT_CONFIG): Knex {
     useNullAsDefault: config.client === 'sqlite3',
   };
 
-  instance = knex(knexConfig);
-  return instance;
+  g.__dropjs_db = knex(knexConfig);
+  return g.__dropjs_db;
 }
 
 export function getConnection(): Knex {
-  if (!instance) {
+  if (!g.__dropjs_db) {
     throw new Error(
       'Database not initialized. Call createConnection() first or use initDb().'
     );
   }
-  return instance;
+  return g.__dropjs_db;
 }
 
 export async function destroyConnection(): Promise<void> {
-  if (instance) {
-    await instance.destroy();
-    instance = null;
+  if (g.__dropjs_db) {
+    await g.__dropjs_db.destroy();
+    g.__dropjs_db = null;
   }
 }
 
 export function initDb(config?: DropDbConfig): Knex {
-  if (instance) return instance;
+  if (g.__dropjs_db) return g.__dropjs_db;
   return createConnection(config);
 }

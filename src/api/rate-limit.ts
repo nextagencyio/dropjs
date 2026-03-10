@@ -1,8 +1,7 @@
 /**
  * In-memory sliding window rate limiter.
  *
- * Replaces the old express-rate-limit dependency with a native implementation
- * compatible with the custom HTTP server's middleware pattern.
+ * Native sliding window implementation for the custom HTTP server.
  *
  * Rate limits (per IP):
  *   - Auth endpoints:     5 req/min
@@ -12,7 +11,7 @@
  * Set DROP_DISABLE_RATE_LIMIT=1 to bypass all rate limiting (useful for tests).
  */
 
-type MiddlewareFn = (req: any, res: any, next: (err?: unknown) => void) => void;
+import type { MiddlewareFn } from './types.js';
 
 interface WindowEntry {
   timestamps: number[];

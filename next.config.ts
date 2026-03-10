@@ -1,6 +1,51 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
 
 const nextConfig: NextConfig = {
+  webpack: (config, { isServer }) => {
+    // The core codebase uses Node.js ESM-style .js extensions in TypeScript
+    // imports (e.g. `import { foo } from './bar.js'`). Next.js webpack needs
+    // to resolve these to .ts files.
+    config.resolve = config.resolve ?? {};
+    config.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js'],
+      '.mjs': ['.mts', '.mjs'],
+    };
+
+    if (isServer) {
+      // Externalize our core server modules so they're resolved at runtime via
+      // Node.js require() instead of being bundled by webpack. This ensures that
+      // Next.js server components share the same module instances (and singletons
+      // like DB connections, entity registries, session secrets) as the API handler.
+      const coreDirs = ['api', 'core', 'auth', 'db', 'field'].map(
+        (d) => path.resolve(__dirname, 'src', d)
+      );
+
+      const origExternals = config.externals;
+      config.externals = [
+        ...(Array.isArray(origExternals) ? origExternals : []),
+        ({ request, context }: { request?: string; context?: string }, callback: Function) => {
+          if (!request || !context) return callback();
+
+          // Only externalize relative imports that resolve to our core dirs
+          if (request.startsWith('.')) {
+            try {
+              const resolved = path.resolve(context, request);
+              if (coreDirs.some((dir) => resolved.startsWith(dir))) {
+                return callback(null, 'commonjs ' + resolved);
+              }
+            } catch {
+              // ignore resolution errors
+            }
+          }
+          callback();
+        },
+      ];
+    }
+
+    return config;
+  },
+  serverExternalPackages: ['knex', 'better-sqlite3'],
 };
 
 export default nextConfig;

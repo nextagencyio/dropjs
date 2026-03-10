@@ -1,32 +1,7 @@
-'use client';
+import { getModules } from '@/lib/server/data';
 
-import { useState, useEffect } from 'react';
-import { fetchModules, type ModuleInfo } from '@/lib/api-system';
-
-const adminSections = [
-  { name: 'Content', description: 'Create and manage content items like articles and pages.' },
-  { name: 'Structure', description: 'Define content types, manage fields, and configure taxonomies.' },
-  { name: 'Appearance', description: 'Manage the visual presentation and theming of your site.' },
-  { name: 'Extend', description: 'Enable and disable modules to extend site functionality.' },
-  { name: 'Configuration', description: 'Configure site settings, media handling, and system behavior.' },
-  { name: 'People', description: 'Manage user accounts, roles, and permissions.' },
-  { name: 'Reports', description: 'View system status, logs, and site analytics.' },
-];
-
-export default function HelpPage() {
-  const [modules, setModules] = useState<ModuleInfo[]>([]);
-  const [loadingModules, setLoadingModules] = useState(true);
-
-  useEffect(() => {
-    fetchModules()
-      .then((mods) => {
-        setModules(mods);
-        setLoadingModules(false);
-      })
-      .catch(() => {
-        setLoadingModules(false);
-      });
-  }, []);
+export default async function HelpPage() {
+  const modules = await getModules();
 
   return (
     <div>
@@ -74,9 +49,7 @@ export default function HelpPage() {
         <h2 className="text-lg font-semibold text-gin-title mb-3">
           Module help
         </h2>
-        {loadingModules ? (
-          <p className="text-sm text-gin-text-light">Loading modules...</p>
-        ) : modules.length > 0 ? (
+        {modules.length > 0 ? (
           <div className="space-y-3">
             {modules.map((mod) => (
               <div key={mod.name}>
@@ -116,3 +89,13 @@ export default function HelpPage() {
     </div>
   );
 }
+
+const adminSections = [
+  { name: 'Content', description: 'Create and manage content items like articles and pages.' },
+  { name: 'Structure', description: 'Define content types, manage fields, and configure taxonomies.' },
+  { name: 'Appearance', description: 'Manage the visual presentation and theming of your site.' },
+  { name: 'Extend', description: 'Enable and disable modules to extend site functionality.' },
+  { name: 'Configuration', description: 'Configure site settings, media handling, and system behavior.' },
+  { name: 'People', description: 'Manage user accounts, roles, and permissions.' },
+  { name: 'Reports', description: 'View system status, logs, and site analytics.' },
+];

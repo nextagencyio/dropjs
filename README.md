@@ -27,7 +27,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Cron scheduler** — Tick-based job scheduler with EventBus integration and admin API
 - **Webhook system** — HTTP webhooks for entity lifecycle and system events with HMAC signing
 - **Theme system** — Discoverable themes with YAML metadata, region definitions, and admin UI for switching
-- **Module system** — Extensible module architecture with enable/disable persistence
+- **Module system** — Drupal-style extensible module architecture with route/middleware contribution, event hooks, dependency management, and enable/disable persistence
 - **Media library** — File uploads with image style processing, grid browser, search, and bulk operations
 - **URL aliases** — Human-readable paths with auto-generation on entity create/update and middleware-based resolution
 - **Config sync** — Import/export all configuration as JSON, diff incoming config against current state
@@ -50,9 +50,14 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Contact forms** — Multi-form contact system with message submission, status tracking, and EventBus integration
 - **Shortcuts** — Per-user admin toolbar shortcut links with reorder and shortcut sets
 - **Token replacement** — `[type:name]` token system with 6 built-in types (node, user, site, date, current-date, random) for dynamic text substitution
+- **Mail system** — SMTP email via nodemailer with console fallback, pluggable template registry (password reset, contact notifications, registration)
+- **Session signing** — HMAC-SHA256 signed session tokens with configurable secret
+- **SSR public frontend** — Server-rendered pages (Next.js server components) with SEO metadata, OpenGraph tags, pagination, user profiles, RSS feed, sitemap, and 404 page
+- **CI pipeline** — GitHub Actions with type checking, unit tests (Vitest), and E2E tests (Playwright)
 - **Authentication** — Users, roles, 21 permissions, entity-level access control, sessions, CSRF protection, rate limiting, registration, and password reset
 - **Drupal migration** — Read a Drupal database and migrate content directly
-- **E2E tested** — 362 Playwright tests across 39 specs covering the full stack
+- **E2E tested** — 382+ Playwright tests across 42 specs covering the full stack
+- **Unit tested** — 197 Vitest tests across 12 files
 - **Search API** — FTS5 full-text search with porter stemming across all entity types
 - **Rate limiting** — In-memory sliding window rate limiter (5/min auth, 30/min mutations, 100/min reads) with `X-RateLimit-*` headers
 - **HTTP caching** — `Cache-Control`, `ETag`, `Last-Modified` headers on file serving; CDN-friendly `s-maxage` + `stale-while-revalidate` for public API responses
@@ -82,66 +87,17 @@ npm run dev
 
 ```
 src/
-├── api/          REST API, request handling, middleware, OpenAPI
+├── api/          REST API, request handling, middleware, OpenAPI, GraphQL
 ├── auth/         Users, roles, permissions, sessions, CSRF, rate limiting
 ├── cli/          CLI commands (dev, serve, migrate)
-├── core/         Entity system, config, event bus, cron, Views, cache, Drupal compat
+├── core/         Entity system, config, event bus, cron, Views, cache, mail, Drupal compat
 ├── db/           Database abstraction (SQLite via Knex), schema management
 ├── field/        18 field type definitions, storage engine with revision tables
+├── modules/      Drupal-style modules (GraphQL, JSON:API, GraphQL Compose)
 ├── migrate/      Drupal-to-drop.js migration tools
-├── app/          Next.js admin UI (React 19, App Router)
-├── components/   Admin UI components
-└── lib/          Admin UI utilities
-```
-
-## Defining Content Types
-
-Content types are JSON files that AI agents (and humans) can read and write:
-
-```json
-{
-  "entity_type": "node",
-  "bundle": "article",
-  "label": "Article",
-  "fields": {
-    "title": { "type": "string", "required": true, "max_length": 255 },
-    "body": { "type": "text_long", "format": "html" },
-    "field_tags": {
-      "type": "entity_reference",
-      "target_type": "taxonomy_term",
-      "target_bundle": "tags",
-      "cardinality": -1
-    }
-  }
-}
-```
-
-## Entity API
-
-```typescript
-import { Entity } from './src/core/index.js';
-
-// Create
-const article = await Entity.create('node', 'article', {
-  title: 'My First Post',
-  body: { value: '<p>Hello world</p>', format: 'html' },
-  field_tags: [1, 5, 12],
-  status: true,
-});
-
-// Query
-const results = await Entity.query('node')
-  .condition('type', 'article')
-  .condition('status', true)
-  .sort('created', 'DESC')
-  .range(0, 10)
-  .execute();
-
-// Load, update, delete
-const article = await Entity.load('node', 42);
-article.title = 'Updated Title';
-await article.save();
-await Entity.delete('node', 42);
+├── app/          Next.js admin UI + SSR public frontend (React 19, App Router)
+├── components/   Admin UI + public frontend components
+└── lib/          Client-side API utilities + server-side fetch
 ```
 
 ## Auto-Generated REST API
@@ -357,6 +313,15 @@ POST   /api/graphql              — Execute GraphQL query/mutation
 ```
 
 Queries: `entityTypes`, `node(nid)`, `nodes(type, status, limit, offset)`, `taxonomyTerm(tid)`, `taxonomyTerms(type)`, plus per-bundle typed queries. Mutations: `createNode`, `updateNode`, `deleteNode`. Full introspection support.
+
+### GraphQL Compose API
+
+```
+GET    /api/graphql-compose     — GraphQL Compose playground or query via ?query=...
+POST   /api/graphql-compose     — Execute GraphQL Compose query/mutation
+```
+
+Extended GraphQL with Relay-style pagination (cursor-based connections with `first`/`after`/`last`/`before`), per-bundle typed mutations (`createArticle`, `updateArticle`), and union types. Contributed by the `graphql_compose` module.
 
 ### Layout Builder API
 
@@ -729,8 +694,11 @@ npm install
 # Start dev server (SQLite, auto-reload)
 npm run dev
 
+# Run unit tests (Vitest)
+npm test
+
 # Run E2E tests (Playwright)
-npx playwright test
+npm run test:e2e
 
 # Run E2E tests in UI mode
 npx playwright test --ui
@@ -739,10 +707,12 @@ npx playwright test --ui
 npx playwright test tests/e2e/drupal-compat.spec.ts
 
 # Type check
-npx tsc --noEmit
+npm run typecheck
 ```
 
 Requires Node.js >= 18.0.0.
+
+CI runs type checking, unit tests, and E2E tests on every push and PR via GitHub Actions.
 
 ## Environment Variables
 
@@ -752,7 +722,17 @@ Requires Node.js >= 18.0.0.
 | `DROP_DATA_DIR` | Data directory path | `./data` |
 | `DROP_DISABLE_RATE_LIMIT` | Disable rate limiting (`1`) | — |
 | `DROP_CLEAN_DB` | Clean DB on startup (for E2E) | — |
+| `DROP_NO_ADMIN` | Disable admin UI (API-only mode) | — |
 | `NODE_ENV` | Environment mode | `development` |
+| `SESSION_SECRET` | HMAC secret for signing session tokens | auto-generated |
+| `SMTP_HOST` | SMTP server hostname | — |
+| `SMTP_PORT` | SMTP server port | `587` |
+| `SMTP_USER` | SMTP username | — |
+| `SMTP_PASS` | SMTP password | — |
+| `MAIL_FROM` | Default sender email address | — |
+| `SITE_URL` | Public site URL (used in email links) | — |
+| `SITE_EMAIL` | Site email (contact form notifications) | — |
+| `LOG_LEVEL` | Logging level | `info` |
 
 ## Architecture
 
@@ -762,11 +742,14 @@ Requires Node.js >= 18.0.0.
 │       (Next.js Admin UI, API consumers)          │
 ├─────────────────────────────────────────────────┤
 │            src/api (Custom HTTP)                  │
-│  REST · OpenAPI · CSRF · Rate Limiting · Media   │
+│  REST · OpenAPI · GraphQL · CSRF · Rate Limit    │
+├─────────────────────────────────────────────────┤
+│              src/modules                          │
+│  GraphQL · JSON:API · GraphQL Compose            │
 ├─────────────────────────────────────────────────┤
 │                 src/core                          │
 │  Entity System · Event Bus · Config · Modules    │
-│  Views · Cache · Cron · Drupal Compat            │
+│  Views · Cache · Cron · Mail · Drupal Compat     │
 ├──────────┬──────────────────────┬───────────────┤
 │ src/     │      src/auth        │   src/        │
 │ field    │  Users · Roles · ACL │   migrate     │

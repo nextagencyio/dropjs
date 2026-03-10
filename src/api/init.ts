@@ -29,7 +29,26 @@ import {
   Entity,
   registerEntityType,
   getEntityTypeDefinition,
+  installModule,
+  ensureWebhooksTable,
+  ensureWatchdogTable,
+  ensureAccessLogTable,
+  ensureKeyValueTable,
+  ensureQueueTable,
+  ensureCommentTables,
+  ensureParagraphsTable,
+  registerParagraphHooks,
+  ensurePreviewTable,
+  registerPreviewCleanupCronJob,
+  ensureActionTriggersTable,
+  registerDefaultActions,
+  registerTriggerHooks,
+  ensureContactTables,
+  ensureShortcutTables,
+  registerDefaultTokens,
+  createLogger,
 } from '../core/index.js';
+import { graphqlModule, jsonapiModule, graphqlComposeModule } from '../modules/index.js';
 import { ensureAuthTables, seedDefaultRoles } from '../auth/index.js';
 import {
   ensureFileTable,
@@ -39,24 +58,36 @@ import {
 // Ensure field type registration side-effects run
 import '../field/index.js';
 
-let initialized = false;
-let initializing: Promise<void> | null = null;
+// Use globalThis so the init flag is shared across webpack module boundaries
+// (Next.js server components get a separate module instance from the API handler)
+const g = globalThis as unknown as {
+  __dropjs_initialized?: boolean;
+  __dropjs_initializing?: Promise<void> | null;
+};
+
+/**
+ * Mark initialization as complete without running init logic.
+ * Used by unit tests that set up their own DB and entity types.
+ */
+export function markInitialized(): void {
+  g.__dropjs_initialized = true;
+}
 
 /**
  * Lazy singleton that initializes all DropJS subsystems.
  * Safe to call multiple times — only runs once.
  */
 export async function ensureInitialized(): Promise<void> {
-  if (initialized) return;
+  if (g.__dropjs_initialized) return;
 
   // Prevent concurrent initialization
-  if (initializing) {
-    await initializing;
+  if (g.__dropjs_initializing) {
+    await g.__dropjs_initializing;
     return;
   }
 
-  initializing = doInit();
-  await initializing;
+  g.__dropjs_initializing = doInit();
+  await g.__dropjs_initializing;
 }
 
 async function doInit(): Promise<void> {
@@ -143,6 +174,11 @@ async function doInit(): Promise<void> {
   registerCacheHooks();
   registerValidationHooks();
 
+  // Install Web services modules (graphql, jsonapi, graphql_compose)
+  await installModule(graphqlModule);
+  await installModule(jsonapiModule);
+  await installModule(graphqlComposeModule);
+
   // Initialize FTS5 search index
   await ensureSearchIndex();
 
@@ -180,7 +216,43 @@ async function doInit(): Promise<void> {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  initialized = true;
+  // Ensure subsystem tables (previously only ran on first API request)
+  await ensureSubsystemTables();
+
+  g.__dropjs_initialized = true;
+}
+
+const logger = createLogger('init');
+
+/**
+ * Ensure subsystem tables exist (webhooks, watchdog, comments, etc.).
+ * Moved here from request-handler.ts so Server Components can use them too.
+ */
+async function ensureSubsystemTables(): Promise<void> {
+  const tasks = [
+    ensureWebhooksTable(),
+    ensureWatchdogTable(),
+    ensureAccessLogTable(),
+    ensureKeyValueTable(),
+    ensureQueueTable(),
+    ensureCommentTables(),
+    ensureParagraphsTable(),
+    ensurePreviewTable(),
+    ensureActionTriggersTable(),
+    ensureContactTables(),
+    ensureShortcutTables(),
+  ];
+
+  await Promise.all(tasks.map((p) => p.catch((err) => {
+    logger.error('Failed to ensure subsystem table', { error: String(err) });
+  })));
+
+  // Register hooks and default data (sync, idempotent)
+  registerParagraphHooks();
+  registerPreviewCleanupCronJob();
+  registerDefaultActions();
+  registerTriggerHooks();
+  registerDefaultTokens();
 }
 
 /**

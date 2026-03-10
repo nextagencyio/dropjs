@@ -131,7 +131,7 @@ function transformResponse(body: unknown, req: Request): JsonApiDocument {
 }
 
 /**
- * Express middleware that transforms responses to JSON:API format
+ * Middleware that transforms responses to JSON:API format
  * when the client requests it via Accept header or query parameter.
  */
 export function jsonApiMiddleware(req: Request, res: Response, next: NextFunction): void {

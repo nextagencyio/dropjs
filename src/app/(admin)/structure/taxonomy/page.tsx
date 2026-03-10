@@ -1,54 +1,11 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchVocabularies, deleteVocabulary, type EntityTypeDefinition } from '@/lib/api-entities';
+import { getVocabularies } from '@/lib/server/data';
+import { requirePermission } from '@/lib/server/auth';
+import { DeleteVocabularyButton } from './_components/taxonomy-client';
 
-export default function TaxonomyList() {
-  const [vocabularies, setVocabularies] = useState<EntityTypeDefinition[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = () => {
-    setLoading(true);
-    fetchVocabularies()
-      .then((v) => {
-        setVocabularies(v);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const handleDelete = async (vid: string, label: string) => {
-    if (!confirm(`Delete vocabulary "${label}"?`)) return;
-    try {
-      await deleteVocabulary(vid);
-      load();
-    } catch {
-      alert('Failed to delete vocabulary');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div>
-        <div className="h-8 w-40 animate-pulse bg-gin-bg-layer2 rounded-gin-s mb-5" />
-        <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-          <div className="bg-gin-bg-layer2 px-4 py-3">
-            <div className="h-4 w-full animate-pulse bg-gin-bg-app rounded-gin-s" />
-          </div>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="px-4 py-3 border-t border-gin-border">
-              <div className="h-4 w-3/4 animate-pulse bg-gin-bg-layer2 rounded-gin-s" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+export default async function TaxonomyList() {
+  await requirePermission('administer taxonomy');
+  const vocabularies = await getVocabularies();
 
   return (
     <div>
@@ -113,12 +70,10 @@ export default function TaxonomyList() {
                       >
                         Edit
                       </Link>
-                      <button
-                        onClick={() => handleDelete(vocab.bundle, vocab.label)}
-                        className="text-sm text-gin-danger hover:underline"
-                      >
-                        Delete
-                      </button>
+                      <DeleteVocabularyButton
+                        vid={vocab.bundle}
+                        label={vocab.label}
+                      />
                     </div>
                   </td>
                 </tr>

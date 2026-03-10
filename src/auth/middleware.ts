@@ -2,7 +2,7 @@ import { validateToken } from './session.js';
 import { loadUser, type UserData } from './user.js';
 import { userHasPermission } from './access.js';
 
-// Express-compatible types (avoid hard dep on @types/express in this package)
+// Framework-agnostic types for auth middleware
 interface AuthRequest {
   headers: Record<string, string | string[] | undefined>;
   user?: UserData | null;

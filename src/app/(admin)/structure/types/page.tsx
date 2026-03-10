@@ -1,36 +1,11 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchEntityTypes, deleteContentType, type EntityTypeDefinition } from '@/lib/api-entities';
+import { getEntityTypes } from '@/lib/server/data';
+import { requirePermission } from '@/lib/server/auth';
+import { DeleteContentTypeButton } from './_components/content-types-client';
 
-export default function ContentTypesPage() {
-  const [types, setTypes] = useState<EntityTypeDefinition[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = () => {
-    setLoading(true);
-    fetchEntityTypes()
-      .then((t) => {
-        setTypes(t);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const handleDelete = async (entityType: string, bundle: string, label: string) => {
-    if (!confirm(`Delete content type "${label}"? This cannot be undone.`)) return;
-    try {
-      await deleteContentType(entityType, bundle);
-      load();
-    } catch {
-      alert('Failed to delete content type');
-    }
-  };
+export default async function ContentTypesPage() {
+  await requirePermission('administer content types');
+  const types = await getEntityTypes();
 
   return (
     <div>
@@ -57,18 +32,7 @@ export default function ContentTypesPage() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <tr key={i} className="border-t border-gin-border">
-                  <td className="px-4 py-3"><div className="h-4 w-24 animate-pulse bg-gin-bg-layer2 rounded-gin-s" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-16 animate-pulse bg-gin-bg-layer2 rounded-gin-s" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-20 animate-pulse bg-gin-bg-layer2 rounded-gin-s" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-32 animate-pulse bg-gin-bg-layer2 rounded-gin-s" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-8 animate-pulse bg-gin-bg-layer2 rounded-gin-s" /></td>
-                  <td className="px-4 py-3"><div className="h-4 w-28 animate-pulse bg-gin-bg-layer2 rounded-gin-s" /></td>
-                </tr>
-              ))
-            ) : types.length === 0 ? (
+            {types.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-12 text-gin-text-light">
                   No content types registered.{' '}
@@ -112,12 +76,11 @@ export default function ContentTypesPage() {
                       >
                         Edit
                       </Link>
-                      <button
-                        onClick={() => handleDelete(item.entity_type, item.bundle, item.label)}
-                        className="text-sm text-gin-danger hover:underline"
-                      >
-                        Delete
-                      </button>
+                      <DeleteContentTypeButton
+                        entityType={item.entity_type}
+                        bundle={item.bundle}
+                        label={item.label}
+                      />
                     </div>
                   </td>
                 </tr>

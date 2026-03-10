@@ -1,6 +1,6 @@
 /**
- * Declarative route table — all 270+ API routes extracted from server.ts.
- * Used by the request-handler to dispatch requests without Express.
+ * Declarative route table — all API route definitions.
+ * Used by the request-handler to dispatch incoming requests.
  */
 
 import type { MiddlewareFn } from './middleware-runner.js';
@@ -108,6 +108,7 @@ import {
   handleUpdatePattern, handleDeletePattern, handleBulkGenerate,
 } from './handlers/pathauto.js';
 import { handleGraphQL } from './graphql.js';
+import { getModuleRoutes, isModuleEnabled } from '../core/index.js';
 import { handleBatch } from './handlers/batch.js';
 import {
   handleListRestResources, handleGetRestResource,
@@ -237,9 +238,13 @@ export function buildRouteTable(): RouteEntry[] {
       },
     },
 
-    // ── GraphQL ──────────────────────────────────────────────────────────
-    { method: 'GET', pattern: '/api/graphql', middleware: auth(), skipCsrf: true, handler: handleGraphQL },
-    { method: 'POST', pattern: '/api/graphql', middleware: auth(), skipCsrf: true, handler: handleGraphQL },
+    // ── GraphQL (fallback when graphql module is not loaded) ───────────
+    // When the graphql module is enabled, it provides these routes via the module system.
+    // This fallback ensures backward compatibility for deployments that haven't adopted modules yet.
+    ...(!isModuleEnabled('graphql') ? [
+      { method: 'GET' as const, pattern: '/api/graphql', middleware: auth(), skipCsrf: true, handler: handleGraphQL },
+      { method: 'POST' as const, pattern: '/api/graphql', middleware: auth(), skipCsrf: true, handler: handleGraphQL },
+    ] : []),
 
     // ── CSRF token ───────────────────────────────────────────────────────
     { method: 'GET', pattern: '/api/csrf-token', skipCsrf: true, handler: csrfTokenHandler },
@@ -274,10 +279,12 @@ export function buildRouteTable(): RouteEntry[] {
     // ── Entity types ─────────────────────────────────────────────────────
     {
       method: 'GET', pattern: '/api/entity-types',
+      middleware: auth(),
       handler: async (_req: any, res: any) => { res.json({ data: getAllEntityTypes() }); },
     },
     {
       method: 'GET', pattern: '/api/entity-types/:entityType/:bundle',
+      middleware: auth(),
       handler: async (req: any, res: any) => {
         const { entityType, bundle } = req.params;
         const { getEntityTypeDefinition } = await import('../core/index.js');
@@ -866,6 +873,10 @@ export function buildRouteTable(): RouteEntry[] {
         res.json({ data: entity.toJSON() });
       },
     },
+
+    // ── Module-contributed routes ────────────────────────────────────────
+    // Inserted before generic entity catch-all routes so module patterns take priority.
+    ...getModuleRoutes() as RouteEntry[],
 
     // ── Entity CRUD (catch-all — MUST be last) ──────────────────────────
     { method: 'GET', pattern: '/api/:entityType/:bundle', middleware: auth(), handler: handleList },

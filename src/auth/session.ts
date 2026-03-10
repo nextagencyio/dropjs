@@ -11,18 +11,26 @@ export interface Session {
 
 const DEFAULT_EXPIRY_HOURS = 24 * 7; // 1 week
 
-// HMAC session signing
-const SESSION_SECRET: string = (() => {
+// HMAC session signing — use globalThis to share the secret across webpack module
+// boundaries (Next.js server components get a separate module instance)
+const g = globalThis as unknown as { __dropjs_session_secret?: string };
+
+function getSessionSecret(): string {
+  if (g.__dropjs_session_secret) return g.__dropjs_session_secret;
   const envSecret = process.env.SESSION_SECRET;
-  if (envSecret) return envSecret;
+  if (envSecret) {
+    g.__dropjs_session_secret = envSecret;
+    return envSecret;
+  }
   console.warn(
     '[dropjs] WARNING: SESSION_SECRET is not set. Using a random secret — sessions will not survive restarts. Set SESSION_SECRET in .env for production.'
   );
-  return crypto.randomBytes(32).toString('hex');
-})();
+  g.__dropjs_session_secret = crypto.randomBytes(32).toString('hex');
+  return g.__dropjs_session_secret;
+}
 
 function hmacSign(token: string): string {
-  return crypto.createHmac('sha256', SESSION_SECRET).update(token).digest('hex');
+  return crypto.createHmac('sha256', getSessionSecret()).update(token).digest('hex');
 }
 
 function signToken(token: string): string {

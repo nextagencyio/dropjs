@@ -158,7 +158,7 @@ test.describe('Auth Pages', () => {
       });
       expect(forgotResp.ok()).toBeTruthy();
       const forgotBody = await forgotResp.json();
-      expect(forgotBody.message).toContain('reset token');
+      expect(forgotBody.message).toContain('password reset link has been sent');
     });
 
     test('should reject reset with invalid token', async ({ page }) => {

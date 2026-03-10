@@ -1,8 +1,5 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchStatusReport, type StatusReportData } from '@/lib/api-system';
+import { getStatusReport } from '@/lib/server/data';
 
 function formatUptime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -26,7 +23,7 @@ interface StatusItem {
   color: StatusColor;
 }
 
-function buildStatusItems(data: StatusReportData): StatusItem[] {
+function buildStatusItems(data: Awaited<ReturnType<typeof getStatusReport>>): StatusItem[] {
   return [
     {
       label: 'drop.js version',
@@ -77,22 +74,15 @@ const dotColors: Record<StatusColor, string> = {
   blue: 'bg-gin-primary',
 };
 
-export default function StatusReportPage() {
-  const [report, setReport] = useState<StatusReportData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+export default async function StatusReportPage() {
+  let report: Awaited<ReturnType<typeof getStatusReport>> | null = null;
+  let error = '';
 
-  useEffect(() => {
-    fetchStatusReport()
-      .then((data) => {
-        setReport(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load status report');
-        setLoading(false);
-      });
-  }, []);
+  try {
+    report = await getStatusReport();
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Failed to load status report';
+  }
 
   return (
     <div>
@@ -117,11 +107,7 @@ export default function StatusReportPage() {
         </div>
       )}
 
-      {loading ? (
-        <div className="bg-white border border-gin-border rounded-gin p-8 text-center text-gin-text-light">
-          Loading...
-        </div>
-      ) : report ? (
+      {report ? (
         <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
           <table className="w-full text-sm">
             <thead>

@@ -1,17 +1,8 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Inbox, FileText, Plus } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import {
-  fetchEntityTypes,
-  fetchEntityList,
-  type EntityTypeDefinition,
-  type EntityData,
-} from '@/lib/api-entities';
-import { fetchUsers } from '@/lib/api-users';
-import type { User } from '@/lib/api-auth';
+import { requireAuth } from '@/lib/server/auth';
+import { getEntityTypes, listEntities, listUsers } from '@/lib/server/data';
+import type { EntityData } from '@/lib/server/data';
 
 interface ContentCount {
   label: string;
@@ -20,123 +11,55 @@ interface ContentCount {
   total: number;
 }
 
-export default function DashboardPage() {
-  const { user } = useAuth();
-  const [types, setTypes] = useState<EntityTypeDefinition[]>([]);
-  const [contentCounts, setContentCounts] = useState<ContentCount[]>([]);
-  const [recentContent, setRecentContent] = useState<EntityData[]>([]);
-  const [recentUsers, setRecentUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+const formatDate = (val: unknown) => {
+  if (!val) return '';
+  const d = typeof val === 'number' ? new Date(val * 1000) : new Date(val as string);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const allTypes = await fetchEntityTypes();
-        setTypes(allTypes);
+export default async function DashboardPage() {
+  const user = await requireAuth();
+  const allTypes = await getEntityTypes();
+  const nodeTypes = allTypes.filter((t) => t.entity_type === 'node');
 
-        const nodeTypes = allTypes.filter((t) => t.entity_type === 'node');
+  const countPromises = nodeTypes.map(async (t) => {
+    const res = await listEntities(t.entity_type, t.bundle, { limit: 1 });
+    return { label: t.label, entityType: t.entity_type, bundle: t.bundle, total: res.meta.total };
+  });
 
-        const countPromises = nodeTypes.map(async (t) => {
-          const res = await fetchEntityList(t.entity_type, t.bundle, { limit: 1 });
-          return { label: t.label, entityType: t.entity_type, bundle: t.bundle, total: res.meta.total };
-        });
+  const recentPromises = nodeTypes.map(async (t) => {
+    const res = await listEntities(t.entity_type, t.bundle, { limit: 10, sort: '-changed' });
+    return res.data.map((d) => ({ ...d, _entityType: t.entity_type, _bundle: t.bundle, _label: t.label }));
+  });
 
-        const recentPromises = nodeTypes.map(async (t) => {
-          const res = await fetchEntityList(t.entity_type, t.bundle, { limit: 10, sort: '-changed' });
-          return res.data.map((d) => ({ ...d, _entityType: t.entity_type, _bundle: t.bundle, _label: t.label }));
-        });
+  const [contentCounts, recentResults] = await Promise.all([
+    Promise.all(countPromises),
+    Promise.all(recentPromises),
+  ]);
 
-        const [counts, recentResults] = await Promise.all([
-          Promise.all(countPromises),
-          Promise.all(recentPromises),
-        ]);
+  const recentContent = recentResults
+    .flat()
+    .sort((a, b) => {
+      const aDate = a.changed ? new Date(a.changed as string).getTime() : 0;
+      const bDate = b.changed ? new Date(b.changed as string).getTime() : 0;
+      return bDate - aDate;
+    })
+    .slice(0, 10);
 
-        setContentCounts(counts);
-        const allRecent = recentResults
-          .flat()
-          .sort((a, b) => {
-            const aDate = a.changed ? new Date(a.changed as string).getTime() : 0;
-            const bDate = b.changed ? new Date(b.changed as string).getTime() : 0;
-            return bDate - aDate;
-          })
-          .slice(0, 10);
-        setRecentContent(allRecent);
-
-        try {
-          const usersRes = await fetchUsers();
-          const sorted = [...usersRes.data].sort((a, b) => {
-            const aDate = a.created ? new Date(a.created).getTime() : 0;
-            const bDate = b.created ? new Date(b.created).getTime() : 0;
-            return bDate - aDate;
-          });
-          setRecentUsers(sorted.slice(0, 5));
-        } catch {
-          // User may not have permission
-        }
-      } catch {
-        // Silently handle errors
-      }
-      setLoading(false);
-    }
-    loadDashboard();
-  }, []);
-
-  const nodeTypes = types.filter((t) => t.entity_type === 'node');
-  const totalContent = contentCounts.reduce((sum, c) => sum + c.total, 0);
-
-  const formatDate = (val: unknown) => {
-    if (!val) return '';
-    const d = typeof val === 'number' ? new Date(val * 1000) : new Date(val as string);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  if (loading) {
-    return (
-      <div>
-        <div className="animate-pulse space-y-6">
-          <div className="space-y-2">
-            <div className="h-8 bg-gin-bg-layer2 rounded-gin-s w-48" />
-            <div className="h-4 bg-gin-bg-layer2 rounded-gin-s w-64" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white border border-gin-border rounded-gin p-5">
-                <div className="h-7 bg-gin-bg-layer2 rounded-gin-s w-12 mb-2" />
-                <div className="h-4 bg-gin-bg-layer2 rounded-gin-s w-24" />
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white border border-gin-border rounded-gin">
-              <div className="px-4 py-3 border-b border-gin-border">
-                <div className="h-4 bg-gin-bg-layer2 rounded-gin-s w-32" />
-              </div>
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="px-4 py-3 border-b border-gin-border last:border-b-0">
-                  <div className="flex items-center justify-between">
-                    <div className="h-4 bg-gin-bg-layer2 rounded-gin-s w-48" />
-                    <div className="h-4 bg-gin-bg-layer2 rounded-gin-s w-20" />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-6">
-              <div className="bg-white border border-gin-border rounded-gin">
-                <div className="px-4 py-3 border-b border-gin-border">
-                  <div className="h-4 bg-gin-bg-layer2 rounded-gin-s w-28" />
-                </div>
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="px-3 py-2.5">
-                    <div className="h-4 bg-gin-bg-layer2 rounded-gin-s w-32" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  let recentUsers: Awaited<ReturnType<typeof listUsers>>['data'] = [];
+  try {
+    const usersRes = await listUsers();
+    const sorted = [...usersRes.data].sort((a, b) => {
+      const aDate = a.created ? new Date(a.created as string).getTime() : 0;
+      const bDate = b.created ? new Date(b.created as string).getTime() : 0;
+      return bDate - aDate;
+    });
+    recentUsers = sorted.slice(0, 5);
+  } catch {
+    // User may not have permission
   }
+
+  const totalContent = contentCounts.reduce((sum, c) => sum + c.total, 0);
 
   return (
     <div>

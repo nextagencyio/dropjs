@@ -1,14 +1,7 @@
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  fetchContentType,
-  deleteField,
-  reorderFields,
-  type EntityTypeDefinition,
-} from '@/lib/api-entities';
+import { getEntityType } from '@/lib/server/data';
+import { requirePermission } from '@/lib/server/auth';
+import { DeleteFieldButton, ReorderFieldButton } from './_components/fields-client';
 
 interface FieldRow {
   name: string;
@@ -34,111 +27,19 @@ const FIELD_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   json: { label: 'JSON', color: 'bg-gray-100 text-gray-700' },
 };
 
-export default function ContentTypeFieldsPage() {
-  const params = useParams<{ entityType: string; bundle: string }>();
-  const { entityType, bundle } = params;
-  const [definition, setDefinition] = useState<EntityTypeDefinition | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const loadDefinition = useCallback(() => {
-    if (!entityType || !bundle) return;
-    fetchContentType(entityType, bundle)
-      .then((def) => {
-        setDefinition(def);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to load content type');
-        setLoading(false);
-      });
-  }, [entityType, bundle]);
-
-  useEffect(() => {
-    loadDefinition();
-  }, [loadDefinition]);
-
-  const handleDelete = async (fieldName: string) => {
-    if (!entityType || !bundle) return;
-    setDeleting(true);
-    setError('');
-    try {
-      await deleteField(entityType, bundle, fieldName);
-      setDeleteConfirm(null);
-      loadDefinition();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete field');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleMove = async (fieldName: string, direction: 'up' | 'down') => {
-    if (!entityType || !bundle || !definition) return;
-    setError('');
-
-    const sorted = Object.entries(definition.fields)
-      .map(([name, field]) => ({
-        name,
-        weight: (field.weight as number) ?? 0,
-      }))
-      .sort((a, b) => a.weight - b.weight);
-
-    const idx = sorted.findIndex((f) => f.name === fieldName);
-    if (idx < 0) return;
-    if (direction === 'up' && idx === 0) return;
-    if (direction === 'down' && idx === sorted.length - 1) return;
-
-    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    const tmpWeight = sorted[idx].weight;
-    sorted[idx].weight = sorted[swapIdx].weight;
-    sorted[swapIdx].weight = tmpWeight;
-
-    if (sorted[idx].weight === sorted[swapIdx].weight) {
-      sorted.forEach((item, i) => {
-        item.weight = i;
-      });
-    }
-
-    try {
-      await reorderFields(
-        entityType,
-        bundle,
-        sorted.map((f) => ({ name: f.name, weight: f.weight })),
-      );
-      loadDefinition();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reorder fields');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div>
-        <div className="mb-5">
-          <div className="h-4 w-48 animate-pulse bg-gin-bg-layer2 rounded-gin-s" />
-        </div>
-        <div className="h-8 w-64 animate-pulse bg-gin-bg-layer2 rounded-gin-s mb-5" />
-        <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-          <div className="bg-gin-bg-layer2 px-4 py-3">
-            <div className="h-4 w-full animate-pulse bg-gin-bg-app rounded-gin-s" />
-          </div>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="px-4 py-3 border-t border-gin-border">
-              <div className="h-4 w-full animate-pulse bg-gin-bg-layer2 rounded-gin-s" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+export default async function ContentTypeFieldsPage({
+  params,
+}: {
+  params: Promise<{ entityType: string; bundle: string }>;
+}) {
+  await requirePermission('administer content types');
+  const { entityType, bundle } = await params;
+  const definition = await getEntityType(entityType, bundle);
 
   if (!definition) {
     return (
       <div className="bg-red-50 border border-red-200 text-gin-danger rounded-gin-s px-4 py-3 text-sm">
-        {error || 'Content type not found.'}
+        Content type not found.
       </div>
     );
   }
@@ -183,37 +84,6 @@ export default function ContentTypeFieldsPage() {
         {definition.description && ` -- ${definition.description}`}
       </p>
 
-      {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-gin-danger rounded-gin-s px-4 py-3 text-sm">
-          {error}
-        </div>
-      )}
-
-      {deleteConfirm && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-gin-s px-4 py-3">
-          <p className="text-sm text-red-800 mb-3">
-            Are you sure you want to delete the field <strong>{deleteConfirm}</strong>?
-            This will permanently remove the field and all its stored data.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleDelete(deleteConfirm)}
-              disabled={deleting}
-              className="bg-gin-danger text-white rounded-gin-s px-4 py-2 text-sm font-medium hover:opacity-90 transition-colors disabled:opacity-50"
-            >
-              {deleting ? 'Deleting...' : 'Yes, delete'}
-            </button>
-            <button
-              onClick={() => setDeleteConfirm(null)}
-              disabled={deleting}
-              className="border border-gin-border text-gin-text rounded-gin-s px-4 py-2 text-sm font-medium hover:bg-gin-bg-layer2 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -242,22 +112,22 @@ export default function ContentTypeFieldsPage() {
                   <tr key={f.name} className="hover:bg-gin-bg-layer2/50 transition-colors">
                     <td className="text-center px-4 py-3 text-sm text-gin-text border-t border-gin-border">
                       <div className="flex flex-col items-center gap-0.5">
-                        <button
-                          onClick={() => handleMove(f.name, 'up')}
+                        <ReorderFieldButton
+                          fieldName={f.name}
+                          direction="up"
                           disabled={idx === 0}
-                          className="text-gin-text-light hover:text-gin-text disabled:opacity-25 disabled:cursor-not-allowed text-xs leading-none p-0.5"
-                          title="Move up"
-                        >
-                          &#9650;
-                        </button>
-                        <button
-                          onClick={() => handleMove(f.name, 'down')}
+                          entityType={entityType}
+                          bundle={bundle}
+                          fields={fields}
+                        />
+                        <ReorderFieldButton
+                          fieldName={f.name}
+                          direction="down"
                           disabled={idx === fields.length - 1}
-                          className="text-gin-text-light hover:text-gin-text disabled:opacity-25 disabled:cursor-not-allowed text-xs leading-none p-0.5"
-                          title="Move down"
-                        >
-                          &#9660;
-                        </button>
+                          entityType={entityType}
+                          bundle={bundle}
+                          fields={fields}
+                        />
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gin-text border-t border-gin-border">
@@ -293,12 +163,11 @@ export default function ContentTypeFieldsPage() {
                         >
                           Edit
                         </Link>
-                        <button
-                          onClick={() => setDeleteConfirm(f.name)}
-                          className="text-sm text-gin-danger hover:underline"
-                        >
-                          Delete
-                        </button>
+                        <DeleteFieldButton
+                          fieldName={f.name}
+                          entityType={entityType}
+                          bundle={bundle}
+                        />
                       </div>
                     </td>
                   </tr>

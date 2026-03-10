@@ -1,13 +1,14 @@
 /**
- * Sequential middleware executor matching Express (req, res, next) semantics.
+ * Sequential middleware executor.
  *
  * Runs each middleware in order. If a middleware calls res.json()/send()/sendFile()
  * (marking the response as sent), the chain short-circuits.
  */
 
 import type { AdaptedRequest, AdaptedResponse } from './adapter.js';
+import type { MiddlewareFn } from './types.js';
 
-export type MiddlewareFn = (req: any, res: any, next: (err?: unknown) => void) => void | Promise<void>;
+export type { MiddlewareFn };
 
 /**
  * Run an array of middleware functions sequentially.

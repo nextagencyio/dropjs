@@ -28,10 +28,14 @@ export {
   getModule,
   getEnabledModules,
   getAllModules,
+  getModuleRoutes,
+  getModuleMiddleware,
+  isModuleEnabled,
+  onModuleChange,
   loadEntityTypesFromDir,
   clearModuleRegistry,
 } from './module-loader.js';
-export type { ModuleDefinition, ModuleContext, CoreModuleInfo } from './module-loader.js';
+export type { ModuleDefinition, ModuleContext, CoreModuleInfo, ModuleRoute, ModuleMiddleware } from './module-loader.js';
 
 export {
   ensureConfigTable,
@@ -84,7 +88,18 @@ export {
 export { createLogger, setLogLevel } from './logger.js';
 export type { Logger, LogLevel } from './logger.js';
 
-export { sendMail, sendPasswordResetEmail, sendContactNotification, sendRegistrationEmail } from './mail.js';
+export {
+  sendMail,
+  sendTemplatedMail,
+  sendPasswordResetEmail,
+  sendContactNotification,
+  sendRegistrationEmail,
+  setMailTemplate,
+  getMailTemplate,
+  listMailTemplates,
+  resetMailTemplate,
+} from './mail.js';
+export type { MailMessage, MailTemplateResult, MailTemplateRenderer, MailTemplateContext } from './mail.js';
 
 export {
   ensureUrlAliasTable,

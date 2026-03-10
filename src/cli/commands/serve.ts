@@ -31,7 +31,7 @@ export async function serve(): Promise<void> {
   await nextApp.prepare();
   const nextHandler = nextApp.getRequestHandler();
 
-  // Create HTTP server — no Express
+  // Create HTTP server
   const server = http.createServer(async (req, res) => {
     try {
       if (req.url?.startsWith('/api/')) {

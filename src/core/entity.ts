@@ -20,8 +20,11 @@ import {
   DRUPAL_KEY_VALUE_TABLE,
   DRUPAL_SEQUENCES_TABLE,
   DRUPAL_TAXONOMY_TERM_DATA_TABLE,
+  DRUPAL_TAXONOMY_TERM_REVISION_TABLE,
   DRUPAL_TAXONOMY_TERM_FIELD_DATA_TABLE,
+  DRUPAL_TAXONOMY_TERM_FIELD_REVISION_TABLE,
   DRUPAL_TAXONOMY_TERM_PARENT_TABLE,
+  DRUPAL_TAXONOMY_TERM_REVISION_PARENT_TABLE,
   DRUPAL_MEDIA_TABLE,
   DRUPAL_MEDIA_FIELD_DATA_TABLE,
   DRUPAL_MEDIA_REVISION_TABLE,
@@ -140,8 +143,11 @@ export class Entity {
 
     if (entityType === 'taxonomy_term') {
       await dbSchema.createTable('taxonomy_term_data', DRUPAL_TAXONOMY_TERM_DATA_TABLE);
+      await dbSchema.createTable('taxonomy_term_revision', DRUPAL_TAXONOMY_TERM_REVISION_TABLE);
       await dbSchema.createTable('taxonomy_term_field_data', DRUPAL_TAXONOMY_TERM_FIELD_DATA_TABLE);
+      await dbSchema.createTable('taxonomy_term_field_revision', DRUPAL_TAXONOMY_TERM_FIELD_REVISION_TABLE);
       await dbSchema.createTable('taxonomy_term__parent', DRUPAL_TAXONOMY_TERM_PARENT_TABLE);
+      await dbSchema.createTable('taxonomy_term_revision__parent', DRUPAL_TAXONOMY_TERM_REVISION_PARENT_TABLE);
       return;
     }
 
@@ -373,18 +379,27 @@ export class Entity {
     }).execute();
     entity._data.nid = tid; // nid maps to tid for taxonomy_terms
 
-    // 2. Update to set vid = tid
-    await db.update('taxonomy_term_data').set({ vid: tid }).condition('tid', tid).execute();
-    entity._data.vid = tid;
+    // 2. Insert into taxonomy_term_revision
+    const [revisionId] = await db.insert('taxonomy_term_revision').values({
+      tid,
+      langcode: 'en',
+      revision_created: now,
+      revision_default: 1,
+    }).execute();
+
+    // 3. Update taxonomy_term_data to set vid (vocabulary) and revision_id
+    await db.update('taxonomy_term_data').set({ vid: bundle, revision_id: revisionId }).condition('tid', tid).execute();
+    entity._data.vid = revisionId;
 
     // Extract parent and weight from values
     const parentId = typeof entity._data.parent === 'number' ? entity._data.parent : 0;
     const weightVal = typeof entity._data.weight === 'number' ? entity._data.weight : 0;
 
-    // 3. Insert into taxonomy_term_field_data
+    // 4. Insert into taxonomy_term_field_data
     await db.insert('taxonomy_term_field_data').values({
       tid,
-      vid: tid,
+      revision_id: revisionId,
+      vid: bundle,
       type: bundle,
       langcode: 'en',
       default_langcode: 1,
@@ -397,12 +412,39 @@ export class Entity {
       revision_translation_affected: 1,
     }).execute();
 
-    // 4. Insert into taxonomy_term__parent
+    // 5. Insert into taxonomy_term_field_revision (mirror of field_data)
+    await db.insert('taxonomy_term_field_revision').values({
+      tid,
+      revision_id: revisionId,
+      type: bundle,
+      langcode: 'en',
+      default_langcode: 1,
+      name: entity._data.title ?? '',
+      description__value: null,
+      description__format: null,
+      weight: weightVal,
+      changed: now,
+      status: typeof entity._data.status === 'boolean' ? (entity._data.status ? 1 : 0) : (entity._data.status ?? 1),
+      revision_translation_affected: 1,
+    }).execute();
+
+    // 6. Insert into taxonomy_term__parent
     await db.insert('taxonomy_term__parent').values({
       bundle,
       deleted: 0,
       entity_id: tid,
-      revision_id: tid,
+      revision_id: revisionId,
+      langcode: 'en',
+      delta: 0,
+      parent_target_id: parentId,
+    }).execute();
+
+    // 7. Insert into taxonomy_term_revision__parent (mirror of __parent)
+    await db.insert('taxonomy_term_revision__parent').values({
+      bundle,
+      deleted: 0,
+      entity_id: tid,
+      revision_id: revisionId,
       langcode: 'en',
       delta: 0,
       parent_target_id: parentId,
@@ -687,7 +729,7 @@ export class Entity {
       .execute<{ uuid: string }>();
 
     const uuid = termRows.length > 0 ? termRows[0].uuid : undefined;
-    const bundle = (row.type as string) || 'default';
+    const bundle = (row.type as string) || (row.vid as string) || 'default';
 
     const definition = getEntityTypeDefinition('taxonomy_term', bundle);
     if (!definition) return null;
@@ -987,7 +1029,7 @@ export class Entity {
       .execute<{ uuid: string }>();
 
     const uuid = termRows.length > 0 ? termRows[0].uuid : undefined;
-    const bundle = (row.type as string) || 'default';
+    const bundle = (row.type as string) || (row.vid as string) || 'default';
     const definition = getEntityTypeDefinition('taxonomy_term', bundle);
     if (!definition) return null;
 
@@ -1145,8 +1187,11 @@ export class Entity {
       await db.delete('node_revision').condition('nid', id).execute();
       await db.delete('node').condition('nid', id).execute();
     } else if (entityType === 'taxonomy_term') {
+      await db.delete('taxonomy_term_revision__parent').condition('entity_id', id).execute();
       await db.delete('taxonomy_term__parent').condition('entity_id', id).execute();
+      await db.delete('taxonomy_term_field_revision').condition('tid', id).execute();
       await db.delete('taxonomy_term_field_data').condition('tid', id).execute();
+      await db.delete('taxonomy_term_revision').condition('tid', id).execute();
       await db.delete('taxonomy_term_data').condition('tid', id).execute();
     } else if (entityType === 'media') {
       await db.delete('media_field_revision').condition('mid', id).execute();

@@ -51,7 +51,7 @@ export const DRUPAL_NODE_FIELD_REVISION_TABLE: TableDefinition = {
   fields: {
     nid: { type: 'int', unsigned: true, nullable: false },
     vid: { type: 'int', unsigned: true, nullable: false },
-    type: { type: 'varchar', length: 32, nullable: false },
+    type: { type: 'varchar', length: 32, nullable: false, default: '' },
     langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
     title: { type: 'varchar', length: 255, nullable: true },
     uid: { type: 'int', unsigned: true, nullable: true, default: 0 },
@@ -69,17 +69,52 @@ export const DRUPAL_NODE_FIELD_REVISION_TABLE: TableDefinition = {
 export const DRUPAL_TAXONOMY_TERM_DATA_TABLE: TableDefinition = {
   fields: {
     tid: { type: 'serial', primary: true },
-    vid: { type: 'int', unsigned: true, nullable: true },
+    revision_id: { type: 'int', unsigned: true, nullable: true },
+    vid: { type: 'varchar', length: 32, nullable: true },
     uuid: { type: 'varchar', length: 128, nullable: false, unique: true },
     langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
   },
 };
 
+export const DRUPAL_TAXONOMY_TERM_REVISION_TABLE: TableDefinition = {
+  fields: {
+    tid: { type: 'int', unsigned: true, nullable: false },
+    revision_id: { type: 'serial', primary: true },
+    langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
+    revision_user: { type: 'int', unsigned: true, nullable: true },
+    revision_created: { type: 'int', unsigned: true, nullable: true },
+    revision_log_message: { type: 'text', nullable: true },
+    revision_default: { type: 'int', unsigned: true, nullable: false, default: 1 },
+  },
+  indexes: {
+    taxonomy_term_revision__tid: ['tid'],
+  },
+};
+
+export const DRUPAL_TAXONOMY_TERM_FIELD_REVISION_TABLE: TableDefinition = {
+  fields: {
+    tid: { type: 'int', unsigned: true, nullable: false },
+    revision_id: { type: 'int', unsigned: true, nullable: false },
+    type: { type: 'varchar', length: 32, nullable: false, default: '' },
+    langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
+    default_langcode: { type: 'int', unsigned: true, nullable: false, default: 1 },
+    name: { type: 'varchar', length: 255, nullable: false, default: '' },
+    description__value: { type: 'text', nullable: true },
+    description__format: { type: 'varchar', length: 255, nullable: true },
+    weight: { type: 'int', nullable: false, default: 0 },
+    changed: { type: 'int', unsigned: true, nullable: true },
+    status: { type: 'int', unsigned: true, nullable: false, default: 1 },
+    revision_translation_affected: { type: 'int', unsigned: true, nullable: true, default: 1 },
+  },
+  primaryKey: ['revision_id', 'langcode'],
+};
+
 export const DRUPAL_TAXONOMY_TERM_FIELD_DATA_TABLE: TableDefinition = {
   fields: {
     tid: { type: 'int', unsigned: true, nullable: false },
-    vid: { type: 'int', unsigned: true, nullable: false },
-    type: { type: 'varchar', length: 32, nullable: false },
+    revision_id: { type: 'int', unsigned: true, nullable: false },
+    vid: { type: 'varchar', length: 32, nullable: false },
+    type: { type: 'varchar', length: 32, nullable: false, default: '' },
     langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
     default_langcode: { type: 'int', unsigned: true, nullable: false, default: 1 },
     name: { type: 'varchar', length: 255, nullable: false },
@@ -104,6 +139,19 @@ export const DRUPAL_TAXONOMY_TERM_PARENT_TABLE: TableDefinition = {
     parent_target_id: { type: 'int', unsigned: true, nullable: false },
   },
   primaryKey: ['entity_id', 'deleted', 'delta', 'langcode'],
+};
+
+export const DRUPAL_TAXONOMY_TERM_REVISION_PARENT_TABLE: TableDefinition = {
+  fields: {
+    bundle: { type: 'varchar', length: 128, nullable: false },
+    deleted: { type: 'int', unsigned: true, nullable: false, default: 0 },
+    entity_id: { type: 'int', unsigned: true, nullable: false },
+    revision_id: { type: 'int', unsigned: true, nullable: false },
+    langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
+    delta: { type: 'int', unsigned: true, nullable: false },
+    parent_target_id: { type: 'int', unsigned: true, nullable: false },
+  },
+  primaryKey: ['entity_id', 'revision_id', 'deleted', 'delta', 'langcode'],
 };
 
 export const DRUPAL_MEDIA_TABLE: TableDefinition = {
@@ -155,7 +203,7 @@ export const DRUPAL_MEDIA_FIELD_REVISION_TABLE: TableDefinition = {
   fields: {
     mid: { type: 'int', unsigned: true, nullable: false },
     vid: { type: 'int', unsigned: true, nullable: false },
-    bundle: { type: 'varchar', length: 32, nullable: false },
+    bundle: { type: 'varchar', length: 32, nullable: false, default: '' },
     langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
     name: { type: 'varchar', length: 255, nullable: true },
     uid: { type: 'int', unsigned: true, nullable: true, default: 0 },
@@ -238,7 +286,7 @@ export const DRUPAL_BLOCK_CONTENT_FIELD_REVISION_TABLE: TableDefinition = {
   fields: {
     id: { type: 'int', unsigned: true, nullable: false },
     revision_id: { type: 'int', unsigned: true, nullable: false },
-    type: { type: 'varchar', length: 32, nullable: false },
+    type: { type: 'varchar', length: 32, nullable: false, default: '' },
     langcode: { type: 'varchar', length: 12, nullable: false, default: 'en' },
     info: { type: 'varchar', length: 255, nullable: true },
     status: { type: 'int', unsigned: true, nullable: false, default: 1 },

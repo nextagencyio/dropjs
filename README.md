@@ -100,25 +100,147 @@ src/
 └── lib/          Client-side API utilities + server-side fetch
 ```
 
-## Auto-Generated REST API
+## Web Services
 
-Every entity type gets these endpoints automatically:
+drop.js replicates the API surface of Drupal core's REST module, JSON:API module, GraphQL module, and GraphQL Compose module.
+
+### REST API (Drupal core equivalent)
+
+Every entity type gets CRUD endpoints automatically — matching what Drupal's REST module provides out of the box:
 
 ```
-GET    /api/node/article          — List articles
+GET    /api/node/article          — List articles (filter, sort, paginate, include references)
 GET    /api/node/article/:id      — Get single article
 POST   /api/node/article          — Create article
 PATCH  /api/node/article/:id      — Update article
 DELETE /api/node/article/:id      — Delete article
 ```
 
-With query parameters for filtering, sorting, pagination, and reference expansion:
-
 ```
 GET /api/node/article?status=1&sort=-created&page[limit]=10&include=field_tags
 ```
 
-### Content Type & Field Management API
+The same pattern applies to all entity types: `taxonomy_term`, `user`, `comment`, `file`, `menu_link_content`, `block_content`, `paragraph`, etc.
+
+**Taxonomy**
+
+```
+GET    /api/taxonomy/vocabularies          — List vocabularies
+GET    /api/taxonomy/:vid/tree             — Get term hierarchy tree
+```
+
+Taxonomy terms use the standard entity endpoints (`/api/taxonomy_term/:vid`).
+
+**Revisions**
+
+```
+GET    /api/node/:bundle/:nid/revisions              — List revisions
+GET    /api/node/:bundle/:nid/revisions/:vid          — Load specific revision
+POST   /api/node/:bundle/:nid/revisions/:vid/revert   — Revert to revision
+```
+
+**Files & Media**
+
+```
+POST   /api/files/upload             — Upload file (multipart, 50MB max)
+GET    /api/files/:id                — Get file metadata
+GET    /api/files/:id/download       — Download file
+GET    /api/files/:id/style/:style   — Get styled image (thumbnail, medium, large)
+DELETE /api/files/:id                — Delete file
+```
+
+**Comments**
+
+```
+GET    /api/comments?entity_type=...&entity_id=...  — List comments for an entity
+GET    /api/comments/:cid           — Get single comment
+POST   /api/comments                — Create comment
+PATCH  /api/comments/:cid           — Update comment
+DELETE /api/comments/:cid           — Delete comment
+```
+
+**Menus**
+
+```
+GET    /api/menus                        — List menus
+GET    /api/menus/:menuId                — Get menu with tree
+POST   /api/menus/:menuId/items          — Add menu link
+PATCH  /api/menus/:menuId/items/:itemId  — Update menu link
+DELETE /api/menus/:menuId/items/:itemId  — Delete menu link
+```
+
+**Translations**
+
+```
+GET    /api/languages                                        — List all languages
+GET    /api/:entityType/:bundle/:id/translations             — Get translation status
+GET    /api/:entityType/:bundle/:id/translations/:langcode   — Get specific translation
+POST   /api/:entityType/:bundle/:id/translations/:langcode   — Create translation
+PATCH  /api/:entityType/:bundle/:id/translations/:langcode   — Update translation
+DELETE /api/:entityType/:bundle/:id/translations/:langcode   — Delete translation
+```
+
+**Content Moderation**
+
+```
+GET    /api/workflows/:id/transitions/:state        — Get available transitions
+POST   /api/:entityType/:bundle/:id/moderation      — Apply moderation transition
+GET    /api/:entityType/:bundle/:id/moderation      — Get moderation history
+```
+
+**Search**
+
+```
+GET    /api/search?q=...&type=...&bundle=...  — Full-text search (FTS5 with porter stemming)
+```
+
+**Contact**
+
+```
+POST   /api/contact/submit              — Submit a contact message
+```
+
+**Authentication**
+
+```
+GET    /api/csrf-token                  — Get CSRF token
+POST   /api/auth/login                  — Authenticate
+POST   /api/auth/register               — Register user
+POST   /api/auth/logout                 — End session
+POST   /api/auth/forgot-password        — Request password reset token
+POST   /api/auth/reset-password         — Reset password with token
+```
+
+### JSON:API (drupal/jsonapi equivalent)
+
+Any REST endpoint can return JSON:API 1.0 format by adding an `Accept: application/vnd.api+json` header or `?format=jsonapi` query parameter. Entity data is automatically transformed to `{ jsonapi: {version:"1.0"}, data: { type, id, attributes, relationships } }`. Contributed by the `jsonapi` module.
+
+### GraphQL (drupal/graphql equivalent)
+
+```
+GET    /api/graphql              — GraphQL playground (HTML) or query via ?query=...
+POST   /api/graphql              — Execute GraphQL query/mutation
+```
+
+Queries: `entityTypes`, `node(nid)`, `nodes(type, status, limit, offset)`, `taxonomyTerm(tid)`, `taxonomyTerms(type)`, plus per-bundle typed queries. Mutations: `createNode`, `updateNode`, `deleteNode`. Full introspection support. Contributed by the `graphql` module.
+
+### GraphQL Compose (drupal/graphql_compose equivalent)
+
+```
+GET    /api/graphql-compose     — GraphQL Compose playground or query via ?query=...
+POST   /api/graphql-compose     — Execute GraphQL Compose query/mutation
+```
+
+Extended GraphQL with Relay-style pagination (cursor-based connections with `first`/`after`/`last`/`before`), per-bundle typed mutations (`createArticle`, `updateArticle`), and union types. Contributed by the `graphql_compose` module.
+
+### Admin API
+
+Internal endpoints consumed by the admin UI. These are not part of Drupal's public REST surface — they serve the same role as Drupal's admin forms and config management.
+
+<details>
+<summary>Admin API endpoints (click to expand)</summary>
+
+**Entity Type & Field Management**
 
 ```
 POST   /api/entity-types                              — Create content type
@@ -129,63 +251,17 @@ PATCH  /api/entity-types/:entityType/:bundle/fields/:f — Update field
 DELETE /api/entity-types/:entityType/:bundle/fields/:f — Remove field
 ```
 
-### Taxonomy API
+**Taxonomy Admin**
 
 ```
-GET    /api/taxonomy/vocabularies          — List vocabularies
 POST   /api/taxonomy/vocabularies          — Create vocabulary
 PATCH  /api/taxonomy/vocabularies/:vid     — Update vocabulary
 DELETE /api/taxonomy/vocabularies/:vid     — Delete vocabulary
-GET    /api/taxonomy/:vid/tree             — Get term hierarchy tree
 PATCH  /api/taxonomy/:vid/reorder          — Reorder terms
 GET    /api/taxonomy/:vid/content-counts   — Count content per term
 ```
 
-Taxonomy terms use the standard entity endpoints (`/api/taxonomy_term/:vid`).
-
-### Revision API
-
-```
-GET    /api/node/:bundle/:nid/revisions              — List revisions
-GET    /api/node/:bundle/:nid/revisions/:vid          — Load specific revision
-POST   /api/node/:bundle/:nid/revisions/:vid/revert   — Revert to revision
-GET    /api/node/:bundle/:nid/revisions/:v1/diff/:v2   — Compare revisions
-```
-
-### Media & File API
-
-```
-POST   /api/files/upload             — Upload file (multipart, 50MB max)
-GET    /api/files/:id                — Get file metadata
-GET    /api/files/:id/download       — Download file
-GET    /api/files/:id/style/:style   — Get styled image (thumbnail, medium, large)
-DELETE /api/files/:id                — Delete file
-```
-
-### Menu API
-
-```
-GET    /api/menus                        — List menus
-GET    /api/menus/:menuId                — Get menu with tree
-POST   /api/menus                        — Create menu
-DELETE /api/menus/:menuId                — Delete menu
-POST   /api/menus/:menuId/items          — Add menu link
-PATCH  /api/menus/:menuId/items/:itemId  — Update menu link
-DELETE /api/menus/:menuId/items/:itemId  — Delete menu link
-PATCH  /api/menus/:menuId/reorder        — Reorder menu links
-```
-
-### Webhook API
-
-```
-GET    /api/webhooks            — List webhooks
-GET    /api/webhooks/:id        — Get webhook
-POST   /api/webhooks            — Create webhook
-PATCH  /api/webhooks/:id        — Update webhook
-DELETE /api/webhooks/:id        — Delete webhook
-```
-
-### Views API
+**Views**
 
 ```
 GET    /api/views                    — List all views
@@ -193,140 +269,42 @@ GET    /api/views/:id                — Get view definition
 POST   /api/views                    — Create view
 PATCH  /api/views/:id                — Update view
 DELETE /api/views/:id                — Delete view
-GET    /api/views/:id/execute        — Execute view (with optional filters, sorts, pagination)
+GET    /api/views/:id/execute        — Execute view
 ```
 
-### Comment API
-
-```
-GET    /api/comments?entity_type=...&entity_id=...  — List comments for an entity
-GET    /api/comments/:cid           — Get single comment
-POST   /api/comments                — Create comment
-PATCH  /api/comments/:cid           — Update comment
-DELETE /api/comments/:cid           — Delete comment
-```
-
-### Block/Region API
+**Block/Region Layout**
 
 ```
 GET    /api/blocks                          — List registered blocks
 GET    /api/block-placements                — List block placements
-GET    /api/block-placements/:id            — Get placement
 POST   /api/block-placements                — Create placement
 PATCH  /api/block-placements/:id            — Update placement
 DELETE /api/block-placements/:id            — Delete placement
 GET    /api/regions                         — Get region definitions
 PUT    /api/regions                         — Save region definitions
-GET    /api/regions/:region/render          — Render a region
 ```
 
-### State API
+**Webhooks**
 
 ```
-GET    /api/state/:key               — Get state value
-PUT    /api/state/:key               — Set state value
-DELETE /api/state/:key               — Delete state value
+GET    /api/webhooks            — List webhooks
+POST   /api/webhooks            — Create webhook
+PATCH  /api/webhooks/:id        — Update webhook
+DELETE /api/webhooks/:id        — Delete webhook
 ```
 
-### Queue API
-
-```
-GET    /api/queues                   — List queues
-POST   /api/queues/:name/items       — Add item to queue
-POST   /api/queues/:name/process     — Process queue items
-DELETE /api/queues/:name             — Purge queue
-```
-
-### Display Modes API
-
-```
-GET    /api/display-modes/:entityType               — List view modes
-POST   /api/display-modes/:entityType               — Create view mode
-DELETE /api/display-modes/:entityType/:mode          — Delete view mode
-GET    /api/display/:entityType/:bundle/:mode        — Get view display
-PUT    /api/display/:entityType/:bundle/:mode        — Save view display
-DELETE /api/display/:entityType/:bundle/:mode        — Delete view display
-POST   /api/display/:entityType/:bundle/:mode/apply  — Apply display to entity data
-```
-
-### Config Sync API
-
-```
-GET    /api/config/export     — Export all configuration as JSON
-POST   /api/config/import     — Import configuration (overwrites existing)
-POST   /api/config/diff       — Diff incoming config against current state
-```
-
-### Workflow/Moderation API
+**Workflows**
 
 ```
 GET    /api/workflows                               — List workflows
-GET    /api/workflows/:id                           — Get workflow
 POST   /api/workflows                               — Create workflow
 DELETE /api/workflows/:id                           — Delete workflow
-GET    /api/workflows/:id/transitions/:state        — Get available transitions
-POST   /api/:entityType/:bundle/:id/moderation      — Apply moderation transition
-GET    /api/:entityType/:bundle/:id/moderation      — Get moderation history
 ```
 
-### Cache API
+**Layout Builder**
 
 ```
-GET    /api/cache/stats       — Get cache statistics (all bins)
-DELETE /api/cache             — Clear all cache bins
-```
-
-### Search API
-
-```
-GET    /api/search?q=...&type=...&bundle=...  — Full-text search (FTS5 with porter stemming)
-```
-
-### Cron API
-
-```
-GET    /api/cron/status          — List scheduled jobs
-POST   /api/cron/run             — Run all due jobs
-```
-
-### Translation API
-
-```
-GET    /api/languages                                        — List all languages
-GET    /api/languages/enabled                                — List enabled languages
-GET    /api/languages/default                                — Get default language
-POST   /api/languages                                        — Add a language
-PATCH  /api/languages/:id                                    — Enable/disable or update language
-DELETE /api/languages/:id                                    — Remove a language
-GET    /api/:entityType/:bundle/:id/translations             — Get translation status
-GET    /api/:entityType/:bundle/:id/translations/:langcode   — Get specific translation
-POST   /api/:entityType/:bundle/:id/translations/:langcode   — Create translation
-PATCH  /api/:entityType/:bundle/:id/translations/:langcode   — Update translation
-DELETE /api/:entityType/:bundle/:id/translations/:langcode   — Delete translation
-```
-
-### GraphQL API
-
-```
-GET    /api/graphql              — GraphQL playground (HTML) or query via ?query=...
-POST   /api/graphql              — Execute GraphQL query/mutation
-```
-
-Queries: `entityTypes`, `node(nid)`, `nodes(type, status, limit, offset)`, `taxonomyTerm(tid)`, `taxonomyTerms(type)`, plus per-bundle typed queries. Mutations: `createNode`, `updateNode`, `deleteNode`. Full introspection support.
-
-### GraphQL Compose API
-
-```
-GET    /api/graphql-compose     — GraphQL Compose playground or query via ?query=...
-POST   /api/graphql-compose     — Execute GraphQL Compose query/mutation
-```
-
-Extended GraphQL with Relay-style pagination (cursor-based connections with `first`/`after`/`last`/`before`), per-bundle typed mutations (`createArticle`, `updateArticle`), and union types. Contributed by the `graphql_compose` module.
-
-### Layout Builder API
-
-```
-GET    /api/layout-types                                                          — List available layout types
+GET    /api/layout-types                                                          — List layout types
 GET    /api/layout/:entityType/:bundle/:viewMode                                  — Get layout
 PUT    /api/layout/:entityType/:bundle/:viewMode                                  — Save layout
 DELETE /api/layout/:entityType/:bundle/:viewMode                                  — Delete layout
@@ -334,137 +312,84 @@ POST   /api/layout/:entityType/:bundle/:viewMode/sections                       
 DELETE /api/layout/:entityType/:bundle/:viewMode/sections/:sectionId              — Remove section
 POST   /api/layout/:entityType/:bundle/:viewMode/sections/:sectionId/components   — Add component
 DELETE /api/layout/:entityType/:bundle/:viewMode/sections/:sectionId/components/:componentId — Remove component
-GET    /api/layout/:entityType/:bundle/:viewMode/render                           — Render layout
 ```
 
-### Scheduled Publishing API
+**Display Modes**
 
 ```
-GET    /api/scheduler                          — List all scheduled transitions
-GET    /api/scheduler/:entityType/:id          — Get scheduled transition for an entity
-POST   /api/scheduler/:entityType/:id          — Schedule a publish/unpublish transition
+GET    /api/display-modes/:entityType               — List view modes
+POST   /api/display-modes/:entityType               — Create view mode
+DELETE /api/display-modes/:entityType/:mode          — Delete view mode
+GET    /api/display/:entityType/:bundle/:mode        — Get view display
+PUT    /api/display/:entityType/:bundle/:mode        — Save view display
+```
+
+**Scheduled Publishing**
+
+```
+GET    /api/scheduler                          — List scheduled transitions
+POST   /api/scheduler/:entityType/:id          — Schedule a transition
 DELETE /api/scheduler/:entityType/:id          — Cancel a scheduled transition
 ```
 
-### Content Locking API
+**Content Locking**
 
 ```
-GET    /api/content-lock                       — List all active locks
-GET    /api/content-lock/:entityType/:id       — Check lock status for an entity
+GET    /api/content-lock/:entityType/:id       — Check lock status
 POST   /api/content-lock/:entityType/:id       — Acquire a lock
 DELETE /api/content-lock/:entityType/:id       — Release a lock
-POST   /api/content-lock/:entityType/:id/renew — Renew lock duration
 POST   /api/content-lock/:entityType/:id/break — Break a lock (admin only)
 ```
 
-### Pathauto API
+**Pathauto**
 
 ```
 GET    /api/pathauto/patterns                  — List URL alias patterns
-GET    /api/pathauto/patterns/:id              — Get a specific pattern
-POST   /api/pathauto/patterns                  — Create a URL alias pattern
+POST   /api/pathauto/patterns                  — Create a pattern
 PATCH  /api/pathauto/patterns/:id              — Update a pattern
 DELETE /api/pathauto/patterns/:id              — Delete a pattern
-POST   /api/pathauto/generate                  — Bulk generate aliases for entity type/bundle
+POST   /api/pathauto/generate                  — Bulk generate aliases
 ```
 
-### Paragraphs API
+**Paragraphs**
 
 ```
 GET    /api/paragraphs/types                    — List paragraph types
 POST   /api/paragraphs/types                    — Register paragraph type
-GET    /api/paragraphs/types/:type              — Get paragraph type
-DELETE /api/paragraphs/types/:type              — Delete paragraph type
-GET    /api/paragraphs/:parentType/:parentId    — List paragraphs for parent entity
-POST   /api/paragraphs/:parentType/:parentId    — Create paragraph
-PATCH  /api/paragraphs/:id                      — Update paragraph
-DELETE /api/paragraphs/:id                      — Delete paragraph
-PATCH  /api/paragraphs/:parentType/:parentId/reorder — Reorder paragraphs
 ```
 
-### REST Resources API
-
-```
-GET    /api/rest-resources                      — List all REST resources
-POST   /api/rest-resources/:id/enable           — Enable a REST resource
-POST   /api/rest-resources/:id/disable          — Disable a REST resource
-```
-
-### Content Preview API
-
-```
-POST   /api/preview                             — Create preview (returns token)
-GET    /api/preview/:token                      — Load preview by token
-DELETE /api/preview/:token                      — Delete preview
-```
-
-### Validation API
-
-```
-GET    /api/validation/:entityType/:bundle              — Get field constraints
-PUT    /api/validation/:entityType/:bundle/:field       — Set field constraints
-DELETE /api/validation/:entityType/:bundle/:field       — Remove field constraints
-POST   /api/validation/:entityType/:bundle/validate     — Validate entity data
-```
-
-### Batch API
-
-```
-POST   /api/batch                               — Execute multiple API operations
-```
-
-Supports `{ operations: [{method, path, body}], sequential?: boolean }`. Max 25 operations per request. Parallel by default; `sequential: true` stops on first error.
-
-### Actions & Triggers API
-
-```
-GET    /api/actions                     — List registered actions
-GET    /api/triggers                    — List triggers (optional ?event= filter)
-GET    /api/triggers/:id                — Get trigger
-POST   /api/triggers                    — Create trigger (label, event, action_id)
-PATCH  /api/triggers/:id                — Update trigger
-DELETE /api/triggers/:id                — Delete trigger
-POST   /api/triggers/:id/execute        — Manually execute a trigger
-```
-
-### Contact Forms API
+**Contact Forms Admin**
 
 ```
 GET    /api/contact/forms               — List contact forms
-GET    /api/contact/forms/:id           — Get contact form
 POST   /api/contact/forms               — Create contact form
 PATCH  /api/contact/forms/:id           — Update contact form
 DELETE /api/contact/forms/:id           — Delete contact form
-POST   /api/contact/submit              — Submit a contact message
 GET    /api/contact/messages            — List contact messages
-GET    /api/contact/messages/:id        — Get contact message
-PATCH  /api/contact/messages/:id        — Update message status
-DELETE /api/contact/messages/:id        — Delete contact message
 ```
 
-### Shortcuts API
+**Actions & Triggers**
 
 ```
-GET    /api/shortcuts                   — List shortcuts for authenticated user
-POST   /api/shortcuts                   — Add a shortcut
-PATCH  /api/shortcuts/:id               — Update a shortcut
-DELETE /api/shortcuts/:id               — Delete a shortcut
-PATCH  /api/shortcuts/reorder           — Reorder shortcuts (body: {ids: number[]})
-GET    /api/shortcut-sets               — List shortcut sets
+GET    /api/actions                     — List registered actions
+GET    /api/triggers                    — List triggers
+POST   /api/triggers                    — Create trigger
+PATCH  /api/triggers/:id                — Update trigger
+DELETE /api/triggers/:id                — Delete trigger
 ```
 
-### Token API
+**REST Resources, Shortcuts, Tokens**
 
 ```
-GET    /api/tokens                      — List registered token types
-POST   /api/tokens/replace              — Replace tokens in text (body: {text, data})
+GET    /api/rest-resources                      — List REST resources
+POST   /api/rest-resources/:id/enable           — Enable a REST resource
+GET    /api/shortcuts                           — List shortcuts
+POST   /api/shortcuts                           — Add a shortcut
+GET    /api/tokens                              — List token types
+POST   /api/tokens/replace                      — Replace tokens in text
 ```
 
-### JSON:API Output
-
-Any endpoint can return JSON:API 1.0 format by adding an `Accept: application/vnd.api+json` header or `?format=jsonapi` query parameter. Entity data is automatically transformed to `{ jsonapi: {version:"1.0"}, data: { type, id, attributes, relationships } }`.
-
-### Configuration API
+**Configuration**
 
 ```
 GET/PATCH  /api/config/site                   — Site information
@@ -474,27 +399,24 @@ GET/POST   /api/aliases                        — URL aliases
 GET        /api/appearance/themes              — List themes
 POST       /api/appearance/themes/active       — Set active theme
 GET/POST   /api/modules/:name/enable|disable   — Module management
+GET/POST   /api/config/export|import|diff      — Config sync
 ```
 
-### Reports API
+**System**
 
 ```
-GET    /api/reports/status       — System status
-GET    /api/reports/logs         — Watchdog logs (filterable, paginated)
-DELETE /api/reports/logs         — Clear logs
-GET    /api/reports/top-pages    — Most visited pages
+GET    /api/state/:key               — State API (key-value store)
+GET    /api/queues                   — Queue API
+GET    /api/cache/stats              — Cache statistics
+DELETE /api/cache                    — Clear cache
+GET    /api/cron/status              — Cron status
+POST   /api/cron/run                 — Run cron
+GET    /api/reports/status           — System status
+GET    /api/reports/logs             — Watchdog logs
+POST   /api/batch                   — Batch operations
 ```
 
-### Security
-
-```
-GET    /api/csrf-token                  — Get CSRF token
-POST   /api/auth/login                  — Authenticate
-POST   /api/auth/register               — Register user
-POST   /api/auth/logout                 — End session
-POST   /api/auth/forgot-password        — Request password reset token
-POST   /api/auth/reset-password         — Reset password with token
-```
+</details>
 
 Rate limits: 5 req/min for auth, 30 req/min for mutations, 100 req/min for reads.
 

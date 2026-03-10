@@ -12,7 +12,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Revision system** — Every content change tracked with full revision history, diff, and revert
 - **Taxonomy system** — Vocabularies and terms with hierarchical parent-child relationships
 - **Database agnostic** — SQLite for dev, PostgreSQL/Supabase for production — swap with one config change or `DATABASE_URL`
-- **Drupal schema compatibility** — Node/taxonomy tables mirror Drupal's structure exactly
+- **Drupal schema compatibility** — Node, taxonomy, media, and block tables mirror Drupal's structure exactly — verified for both reads and writes
 - **Auto-generated API** — Every entity type gets JSON:API and GraphQL endpoints automatically
 - **OpenAPI/Swagger** — Auto-generated API documentation at `/api/docs`
 - **Views system** — Drupal Views-inspired configurable list builder with filters, sorts, pagination, exposed parameters, and live preview
@@ -473,29 +473,32 @@ Events: `entity:presave`, `entity:insert`, `entity:update`, `entity:delete`, `en
 
 ## Drupal 11 Compatibility
 
-drop.js generates a single SQLite database (`drop.db`) that is **verified to boot a real Drupal 11 site**. Copy the file into a Drupal installation's `sites/default/files/` directory, point `settings.php` at it, and Drupal runs — cache rebuild, content rendering, JSON:API, admin login all work.
+drop.js creates a database schema that is **verified to boot a real Drupal 11 site** — both SQLite and PostgreSQL. Point Drupal's `settings.php` at the drop.js database and Drupal runs: cache rebuild, router rebuild, content rendering, JSON:API, entity CRUD, and admin login all work.
 
 ### What's compatible
 
-- **Entity storage** — `node`, `node_field_data`, `node_revision`, `node_field_revision`, taxonomy term tables, field data tables — all match Drupal's exact schema
+- **Entity storage** — `node`, `node_field_data`, `node_revision`, `node_field_revision`, taxonomy term tables (including `taxonomy_term_revision`, `taxonomy_term_field_revision`, `taxonomy_term_revision__parent`), media tables, block content tables — all match Drupal's exact schema
 - **Field storage** — `{entity_type}__{field_name}` + `{entity_type}_revision__{field_name}` with delta, langcode, and deleted columns
 - **Config** — `config` table with PHP-serialized data for entity types, field storage, field instances, roles, site settings, date formats
 - **Key-value** — `key_value` table with `system.schema` entries for all installed modules
 - **Cache bins** — 10 cache tables (`cache_bootstrap`, `cache_config`, `cache_data`, etc.) + `cachetags`
-- **Infrastructure** — `sessions`, `watchdog`, `flood`, `history`, `batch`, `menu_tree`, `router`, `semaphore`, `block_content`, `menu_link_content` tables
+- **Infrastructure** — `sessions`, `watchdog`, `flood`, `history`, `batch`, `menu_tree`, `router`, `semaphore`, `block_content`, `menu_link_content` tables — with correct column types for Drupal's lock system (float expire) and router dumper
 - **Roles & permissions** — PHP-serialized role configs (`user.role.*`) with Drupal metadata (uuid, langcode, status)
 - **Core extension** — `core.extension` config listing 20 installed modules and the Claro theme
 - **Theme config** — `system.theme` config stored in the database for Drupal compatibility (drop.js does not have a theme system — the admin UI is a built-in React application)
+- **Read + write** — Drupal can both read content created by drop.js and create new nodes/taxonomy terms in the same database
 
-### E2E verified
+### Verified scenarios
 
-The Playwright test suite includes a Drupal compatibility spec that:
-1. Starts drop.js and seeds content via the API
-2. Copies the SQLite database to a Drupal 11 DDEV project
-3. Runs `drush status` — confirms Drupal 11 bootstraps with SQLite driver
-4. Queries content — verifies nodes created by drop.js are readable by Drupal
-5. Reads config — confirms `system.site`, `node.type.article`, etc. are valid
-6. Runs `drush cr` — cache rebuild succeeds with no fatal errors
+**SQLite** — Playwright E2E spec copies `drop.db` into a Drupal 11 DDEV project, confirms bootstrap, content queries, config reads, and cache rebuild.
+
+**PostgreSQL** — Manually verified against Drupal 11.3.1 via DDEV + local Supabase:
+1. drop.js seeds content into Supabase PostgreSQL (with RLS enabled on all tables)
+2. Drupal bootstraps successfully with `pgsql` driver
+3. `Node::load()`, `Term::load()`, `User::load()` — all return correct data
+4. `Node::create()->save()`, `Term::create()->save()` — Drupal writes succeed
+5. JSON:API returns articles, pages, taxonomy terms, and users (363 routes rebuilt)
+6. `drush cr` — cache rebuild completes with no errors
 
 ## Development
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { addField, fetchEntityTypes, fetchVocabularies } from '@/lib/api-entities';
+import { addField } from '@/app/(admin)/_actions/entity';
 
 const FIELD_TYPES = [
   { value: 'string', label: 'Text (plain)' },
@@ -36,12 +36,21 @@ function toFieldName(label: string): string {
   );
 }
 
+interface BundleOption {
+  value: string;
+  label: string;
+}
+
 export function AddFieldForm({
   entityType,
   bundle,
+  nodeTypes,
+  vocabularies,
 }: {
   entityType: string;
   bundle: string;
+  nodeTypes: BundleOption[];
+  vocabularies: BundleOption[];
 }) {
   const router = useRouter();
 
@@ -60,24 +69,9 @@ export function AddFieldForm({
   const [precision, setPrecision] = useState('10');
   const [scale, setScale] = useState('2');
 
-  const [bundleOptions, setBundleOptions] = useState<{ value: string; label: string }[]>([]);
-
-  useEffect(() => {
-    if (fieldType !== 'entity_reference') return;
-    if (targetType === 'node') {
-      fetchEntityTypes().then((types) => {
-        const nodeTypes = types.filter((t) => t.entity_type === 'node');
-        setBundleOptions(nodeTypes.map((t) => ({ value: t.bundle, label: t.label })));
-      }).catch(() => setBundleOptions([]));
-    } else if (targetType === 'taxonomy_term') {
-      fetchVocabularies().then((vocabs) => {
-        setBundleOptions(vocabs.map((v) => ({ value: v.bundle, label: v.label })));
-      }).catch(() => setBundleOptions([]));
-    } else {
-      setBundleOptions([]);
-    }
-    setTargetBundle('');
-  }, [fieldType, targetType]);
+  const bundleOptions = fieldType === 'entity_reference'
+    ? (targetType === 'node' ? nodeTypes : targetType === 'taxonomy_term' ? vocabularies : [])
+    : [];
 
   const handleLabelChange = (value: string) => {
     setLabel(value);
@@ -133,22 +127,21 @@ export function AddFieldForm({
     setError('');
     setSubmitting(true);
 
-    try {
-      const settings = buildSettings();
-      await addField(entityType, bundle, {
-        name: fieldName,
-        label,
-        type: fieldType,
-        cardinality: parseInt(cardinality, 10),
-        ...(settings ? { settings } : {}),
-      });
+    const settings = buildSettings();
+    const result = await addField(entityType, bundle, {
+      name: fieldName,
+      label,
+      type: fieldType,
+      cardinality: parseInt(cardinality, 10),
+      ...(settings ? { settings } : {}),
+    });
+    if (result.success) {
       router.push(`/structure/types/${entityType}/${bundle}/fields`);
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add field');
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError(result.error ?? 'Failed to add field');
     }
+    setSubmitting(false);
   };
 
   return (

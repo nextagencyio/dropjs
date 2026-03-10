@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { updateVocabulary } from '@/lib/api-entities';
+import { updateVocabulary } from '@/app/(admin)/_actions/system';
 
 interface VocabularyData {
   label: string;
@@ -31,19 +31,16 @@ export function VocabularyEditForm({
     setError('');
     setSubmitting(true);
 
-    try {
-      await updateVocabulary(vocabulary, {
-        name,
-        description: description || undefined,
-      });
+    const result = await updateVocabulary(vocabulary, {
+      name,
+      description: description || undefined,
+    });
+    if (result.success) {
       router.push('/structure/taxonomy');
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to update vocabulary',
-      );
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError(result.error ?? 'Failed to update vocabulary');
     }
+    setSubmitting(false);
   };
 
   return (

@@ -32,9 +32,15 @@ export interface TokenData {
 }
 
 // ── Registry ───────────────────────────────────────────────────────────────
-
-const tokenTypes = new Map<string, TokenType>();
-const tokenResolvers = new Map<string, TokenResolver>();
+// Stored on globalThis for webpack module sharing.
+const gToken = globalThis as unknown as {
+  __dropjs_token_types?: Map<string, TokenType>;
+  __dropjs_token_resolvers?: Map<string, TokenResolver>;
+};
+if (!gToken.__dropjs_token_types) gToken.__dropjs_token_types = new Map<string, TokenType>();
+if (!gToken.__dropjs_token_resolvers) gToken.__dropjs_token_resolvers = new Map<string, TokenResolver>();
+const tokenTypes = gToken.__dropjs_token_types;
+const tokenResolvers = gToken.__dropjs_token_resolvers;
 
 // ── Registration API ───────────────────────────────────────────────────────
 

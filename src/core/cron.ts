@@ -14,9 +14,19 @@ interface RegisteredJob extends CronJob {
   lastRun: number;
 }
 
-const jobs = new Map<string, RegisteredJob>();
-let cronTimer: ReturnType<typeof setInterval> | null = null;
-let cronRunning = false;
+// Stored on globalThis for webpack module sharing.
+const gCron = globalThis as unknown as {
+  __dropjs_cron_jobs?: Map<string, RegisteredJob>;
+  __dropjs_cron_timer?: ReturnType<typeof setInterval> | null;
+  __dropjs_cron_running?: boolean;
+};
+if (!gCron.__dropjs_cron_jobs) gCron.__dropjs_cron_jobs = new Map<string, RegisteredJob>();
+const jobs = gCron.__dropjs_cron_jobs;
+
+function getCronTimer() { return gCron.__dropjs_cron_timer ?? null; }
+function setCronTimer(t: ReturnType<typeof setInterval> | null) { gCron.__dropjs_cron_timer = t; }
+function isCronRunning() { return gCron.__dropjs_cron_running ?? false; }
+function setCronRunning(v: boolean) { gCron.__dropjs_cron_running = v; }
 
 /**
  * Register a cron job.
@@ -62,11 +72,11 @@ export function getCronJobs(): Array<{
  * Also emits `system:cron` on the EventBus so modules can hook in.
  */
 export async function runCron(): Promise<{ ran: string[]; errors: string[] }> {
-  if (cronRunning) {
+  if (isCronRunning()) {
     return { ran: [], errors: ['Cron already running'] };
   }
 
-  cronRunning = true;
+  setCronRunning(true);
   const now = Date.now();
   const ran: string[] = [];
   const errors: string[] = [];
@@ -91,7 +101,7 @@ export async function runCron(): Promise<{ ran: string[]; errors: string[] }> {
     // Emit system:cron event for modules that registered via EventBus
     await EventBus.emit('system:cron', { timestamp: now });
   } finally {
-    cronRunning = false;
+    setCronRunning(false);
   }
 
   if (ran.length > 0) {
@@ -106,7 +116,7 @@ export async function runCron(): Promise<{ ran: string[]; errors: string[] }> {
  * Checks every `tickInterval` ms (default 60s) and runs due jobs.
  */
 export function startCron(tickInterval: number = 60_000): void {
-  if (cronTimer) return; // Already running
+  if (getCronTimer()) return; // Already running
 
   logger.info(`Cron scheduler started (tick every ${tickInterval / 1000}s)`);
 
@@ -115,20 +125,21 @@ export function startCron(tickInterval: number = 60_000): void {
     logger.error(`Cron tick failed: ${err instanceof Error ? err.message : String(err)}`);
   });
 
-  cronTimer = setInterval(() => {
+  setCronTimer(setInterval(() => {
     runCron().catch((err) => {
       logger.error(`Cron tick failed: ${err instanceof Error ? err.message : String(err)}`);
     });
-  }, tickInterval);
+  }, tickInterval));
 }
 
 /**
  * Stop the cron scheduler.
  */
 export function stopCron(): void {
-  if (cronTimer) {
-    clearInterval(cronTimer);
-    cronTimer = null;
+  const timer = getCronTimer();
+  if (timer) {
+    clearInterval(timer);
+    setCronTimer(null);
     logger.info('Cron scheduler stopped');
   }
 }

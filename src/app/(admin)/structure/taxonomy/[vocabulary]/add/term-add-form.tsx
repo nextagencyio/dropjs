@@ -3,52 +3,26 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  createEntity,
-  fetchEntityList,
-  type EntityData,
-} from '@/lib/api-entities';
+import { createEntity } from '@/app/(admin)/_actions/entity';
 
-function buildHierarchy(terms: EntityData[]): Array<EntityData & { _depth: number }> {
-  const byId = new Map<number, EntityData>();
-  for (const term of terms) {
-    if (term.nid != null) byId.set(term.nid, term);
-  }
-
-  const roots: EntityData[] = [];
-  const childrenMap = new Map<number, EntityData[]>();
-  for (const term of terms) {
-    const parentId = (term.parent as number) ?? 0;
-    if (parentId === 0 || !byId.has(parentId)) {
-      roots.push(term);
-    } else {
-      const siblings = childrenMap.get(parentId) ?? [];
-      siblings.push(term);
-      childrenMap.set(parentId, siblings);
-    }
-  }
-
-  const result: Array<EntityData & { _depth: number }> = [];
-  function walk(term: EntityData, depth: number) {
-    result.push({ ...term, _depth: depth });
-    for (const child of childrenMap.get(term.nid!) ?? []) {
-      walk(child, depth + 1);
-    }
-  }
-  for (const root of roots) walk(root, 0);
-  return result;
+interface TermOption {
+  nid: number;
+  title: string;
+  _depth: number;
 }
 
 export function TermAddForm({
   vocabulary,
   vocabLabel,
+  availableTerms,
 }: {
   vocabulary: string;
   vocabLabel: string;
+  availableTerms: TermOption[];
 }) {
   return (
     <Suspense fallback={<div className="text-gin-text-light">Loading...</div>}>
-      <TermAddFormInner vocabulary={vocabulary} vocabLabel={vocabLabel} />
+      <TermAddFormInner vocabulary={vocabulary} vocabLabel={vocabLabel} availableTerms={availableTerms} />
     </Suspense>
   );
 }
@@ -56,9 +30,11 @@ export function TermAddForm({
 function TermAddFormInner({
   vocabulary,
   vocabLabel,
+  availableTerms,
 }: {
   vocabulary: string;
   vocabLabel: string;
+  availableTerms: TermOption[];
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -69,7 +45,6 @@ function TermAddFormInner({
   const [published, setPublished] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [availableTerms, setAvailableTerms] = useState<Array<EntityData & { _depth: number }>>([]);
 
   useEffect(() => {
     const parentParam = searchParams.get('parent');
@@ -78,37 +53,24 @@ function TermAddFormInner({
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (!vocabulary) return;
-    fetchEntityList('taxonomy_term', vocabulary, {
-      limit: 200,
-      sort: 'weight,title',
-    })
-      .then((res) => {
-        setAvailableTerms(buildHierarchy(res.data));
-      })
-      .catch(() => {});
-  }, [vocabulary]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vocabulary) return;
     setError('');
     setSubmitting(true);
 
-    try {
-      await createEntity('taxonomy_term', vocabulary, {
-        title: name,
-        status: published,
-        weight,
-        parent,
-      });
+    const result = await createEntity('taxonomy_term', vocabulary, {
+      title: name,
+      status: published,
+      weight,
+      parent,
+    });
+    if (result.success) {
       router.push(`/structure/taxonomy/${vocabulary}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save term');
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError(result.error ?? 'Failed to save term');
     }
+    setSubmitting(false);
   };
 
   return (

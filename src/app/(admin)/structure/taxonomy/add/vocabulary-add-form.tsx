@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createVocabulary } from '@/lib/api-entities';
+import { createVocabulary } from '@/app/(admin)/_actions/system';
 
 function toMachineName(name: string): string {
   return name
@@ -40,20 +40,17 @@ export function VocabularyAddForm() {
     setError('');
     setSubmitting(true);
 
-    try {
-      await createVocabulary({
-        vid,
-        name,
-        description: description || undefined,
-      });
+    const result = await createVocabulary({
+      vid,
+      name,
+      description: description || undefined,
+    });
+    if (result.success) {
       router.push('/structure/taxonomy');
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to create vocabulary',
-      );
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError(result.error ?? 'Failed to create vocabulary');
     }
+    setSubmitting(false);
   };
 
   return (

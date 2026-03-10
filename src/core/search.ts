@@ -12,7 +12,11 @@ import { createLogger } from './logger.js';
 
 const logger = createLogger('search');
 
-let ftsAvailable = false;
+// Stored on globalThis for webpack module sharing.
+const gSearch = globalThis as unknown as { __dropjs_fts_available?: boolean };
+
+function getFtsAvailable(): boolean { return gSearch.__dropjs_fts_available ?? false; }
+function setFtsAvailable(v: boolean) { gSearch.__dropjs_fts_available = v; }
 
 /**
  * Create the FTS5 virtual table if it doesn't already exist.
@@ -31,12 +35,12 @@ export async function ensureSearchIndex(): Promise<boolean> {
         tokenize='porter unicode61'
       )
     `);
-    ftsAvailable = true;
+    setFtsAvailable(true);
     logger.info('FTS5 search index ready');
     return true;
   } catch (err) {
     logger.warn('FTS5 not available, falling back to LIKE search', { error: String(err) });
-    ftsAvailable = false;
+    setFtsAvailable(false);
     return false;
   }
 }
@@ -51,7 +55,7 @@ export async function indexEntity(
   title: string,
   body?: string
 ): Promise<void> {
-  if (!ftsAvailable) return;
+  if (!getFtsAvailable()) return;
 
   try {
     const conn = (await import('../db/index.js')).getConnection();
@@ -77,7 +81,7 @@ export async function removeFromIndex(
   entityType: string,
   entityId: number
 ): Promise<void> {
-  if (!ftsAvailable) return;
+  if (!getFtsAvailable()) return;
 
   try {
     const conn = (await import('../db/index.js')).getConnection();
@@ -107,7 +111,7 @@ export async function searchIndex(
   title: string;
   rank: number;
 }>> {
-  if (!ftsAvailable) return [];
+  if (!getFtsAvailable()) return [];
 
   const limit = options.limit ?? 20;
 
@@ -155,14 +159,14 @@ export async function searchIndex(
  * Check if FTS5 is available.
  */
 export function isFtsAvailable(): boolean {
-  return ftsAvailable;
+  return getFtsAvailable();
 }
 
 /**
  * Rebuild the entire search index from entity data.
  */
 export async function rebuildSearchIndex(): Promise<number> {
-  if (!ftsAvailable) return 0;
+  if (!getFtsAvailable()) return 0;
 
   const conn = (await import('../db/index.js')).getConnection();
 

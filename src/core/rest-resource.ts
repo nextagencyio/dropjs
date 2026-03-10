@@ -48,8 +48,10 @@ export interface RestResourceConfig {
 }
 
 // ── In-memory registry ─────────────────────────────────────────────────────
-
-const registry = new Map<string, RestResource>();
+// Stored on globalThis for webpack module sharing.
+const gRest = globalThis as unknown as { __dropjs_rest_resource_registry?: Map<string, RestResource> };
+if (!gRest.__dropjs_rest_resource_registry) gRest.__dropjs_rest_resource_registry = new Map<string, RestResource>();
+const registry = gRest.__dropjs_rest_resource_registry;
 
 const REST_CONFIG_PREFIX = 'rest.resource.';
 

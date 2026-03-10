@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { updateContentType } from '@/lib/api-entities';
+import { updateContentType } from '@/app/(admin)/_actions/entity';
 
 interface ContentTypeData {
   label: string;
@@ -33,21 +33,16 @@ export function ContentTypeEditForm({
     setError('');
     setSubmitting(true);
 
-    try {
-      await updateContentType(entityType, bundle, {
-        label,
-        description: description || undefined,
-      });
+    const result = await updateContentType(entityType, bundle, {
+      label,
+      description: description || undefined,
+    });
+    if (result.success) {
       router.push('/structure/types');
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to update content type',
-      );
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError(result.error ?? 'Failed to update content type');
     }
+    setSubmitting(false);
   };
 
   return (

@@ -286,7 +286,6 @@ export async function enableModule(name: string): Promise<ActionResult> {
     if (mod) {
       await installModule(mod);
     }
-    revalidatePath('/appearance');
     revalidatePath('/extend');
     return { success: true };
   } catch (err) {
@@ -301,7 +300,6 @@ export async function disableModule(name: string): Promise<ActionResult> {
 
   try {
     await uninstallModule(name);
-    revalidatePath('/appearance');
     revalidatePath('/extend');
     return { success: true };
   } catch (err) {
@@ -309,23 +307,6 @@ export async function disableModule(name: string): Promise<ActionResult> {
   }
 }
 
-// ── Themes ──────────────────────────────────────────────────────────
-
-export async function setActiveTheme(themeName: string): Promise<ActionResult> {
-  await ensureInitialized();
-  const auth = await requirePerm('administer themes');
-  if (!auth.success) return auth;
-
-  try {
-    const existing = await loadConfig('system.theme') ?? {};
-    const current = typeof existing === 'string' ? JSON.parse(existing) : existing;
-    await saveConfig('system.theme', { ...current, default: themeName });
-    revalidatePath('/appearance');
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: (err as Error).message };
-  }
-}
 
 // ── Logs ────────────────────────────────────────────────────────────
 
@@ -570,6 +551,35 @@ export async function createVocabulary(data: {
 
     revalidatePath('/structure/taxonomy');
     return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updateVocabulary(
+  vid: string,
+  data: { name?: string; description?: string },
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer taxonomy');
+  if (!auth.success) return auth;
+
+  try {
+    const { getEntityTypeDefinition, registerEntityType } = await import('../../../core/entity-type');
+    const { saveTaxonomyVocabularyConfig } = await import('../../../core/config-storage');
+
+    const def = getEntityTypeDefinition('taxonomy_term', vid);
+    if (!def) return { success: false, error: 'Vocabulary not found' };
+
+    if (data.name !== undefined) def.label = data.name;
+    if (data.description !== undefined) def.description = data.description;
+
+    registerEntityType(def);
+    await saveTaxonomyVocabularyConfig(vid, def.label, def.description);
+
+    revalidatePath('/structure/taxonomy');
+    revalidatePath(`/structure/taxonomy/${vid}`);
+    return { success: true, data: def };
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }

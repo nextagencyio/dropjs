@@ -19,7 +19,6 @@
   "files": [
     "dist/",
     "config/",
-    "themes/",
     "src/app/",
     "src/components/",
     "src/lib/",

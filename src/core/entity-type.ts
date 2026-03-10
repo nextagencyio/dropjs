@@ -59,8 +59,13 @@ export const MEDIA_BASE_FIELDS: Record<string, { type: string; nullable: boolean
   revision_translation_affected: { type: 'int', nullable: true },
 };
 
-// Registry for entity type definitions
-const entityTypeRegistry = new Map<string, EntityTypeDefinition>();
+// Registry for entity type definitions — stored on globalThis so webpack-externalized
+// modules and tsx-loaded modules share the same Map even if module cache keys differ.
+const g = globalThis as unknown as { __dropjs_entity_type_registry?: Map<string, EntityTypeDefinition> };
+if (!g.__dropjs_entity_type_registry) {
+  g.__dropjs_entity_type_registry = new Map<string, EntityTypeDefinition>();
+}
+const entityTypeRegistry = g.__dropjs_entity_type_registry;
 
 function registryKey(entityType: string, bundle: string): string {
   return `${entityType}:${bundle}`;

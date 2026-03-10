@@ -60,7 +60,6 @@ import {
 } from './handlers/image-styles-config.js';
 import { listModules, enableModule as enableModuleHandler, disableModule as disableModuleHandler } from './handlers/modules.js';
 import { getStatusReport, getLogs, clearLogs, getTopPages } from './handlers/reports.js';
-import { listThemes, setActiveTheme } from './handlers/appearance.js';
 import { handleSearch } from './handlers/search.js';
 import { handleRunCron, handleGetCronStatus } from './handlers/cron.js';
 import {
@@ -547,10 +546,6 @@ export function buildRouteTable(): RouteEntry[] {
     // ── Cron ─────────────────────────────────────────────────────────────
     { method: 'GET', pattern: '/api/cron/status', middleware: adminSite(), handler: handleGetCronStatus },
     { method: 'POST', pattern: '/api/cron/run', middleware: adminSite(), handler: handleRunCron },
-
-    // ── Appearance ───────────────────────────────────────────────────────
-    { method: 'GET', pattern: '/api/appearance/themes', middleware: auth(), handler: listThemes },
-    { method: 'POST', pattern: '/api/appearance/themes/active', middleware: adminSite(), handler: setActiveTheme },
 
     // ── Search ───────────────────────────────────────────────────────────
     { method: 'GET', pattern: '/api/search', middleware: auth(), handler: handleSearch },

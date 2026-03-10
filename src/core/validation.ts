@@ -271,10 +271,11 @@ async function validateUnique(
 }
 
 // Custom validator registry for programmatic use
-const customValidators = new Map<
-  string,
-  (field: string, value: unknown, options?: Record<string, unknown>) => ValidationError | null
->();
+// Stored on globalThis for webpack module sharing.
+type ValidatorFn = (field: string, value: unknown, options?: Record<string, unknown>) => ValidationError | null;
+const gVal = globalThis as unknown as { __dropjs_custom_validators?: Map<string, ValidatorFn> };
+if (!gVal.__dropjs_custom_validators) gVal.__dropjs_custom_validators = new Map<string, ValidatorFn>();
+const customValidators: Map<string, ValidatorFn> = gVal.__dropjs_custom_validators;
 
 export function registerCustomValidator(
   name: string,

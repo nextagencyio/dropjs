@@ -389,72 +389,6 @@ export async function getTopPages(period: string = '7d') {
   };
 }
 
-// ── Themes / Appearance ─────────────────────────────────────────────
-
-export interface ThemeInfo {
-  name: string;
-  label: string;
-  description: string;
-  version: string;
-  status: string;
-  default: boolean;
-  admin: boolean;
-  engine: string;
-}
-
-export async function getThemes(): Promise<ThemeInfo[]> {
-  await ensureInitialized();
-  const fs = await import('node:fs');
-  const path = await import('node:path');
-  const yaml = (await import('js-yaml')).default;
-
-  const config = await loadConfig('system.theme');
-  const activeTheme = (config as any)?.default ?? null;
-
-  // Discover themes from themes/ directory (same logic as API handler)
-  const themesDir = path.resolve('themes');
-  const themes: ThemeInfo[] = [];
-
-  if (fs.existsSync(themesDir)) {
-    const entries = fs.readdirSync(themesDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const infoPath = path.join(themesDir, entry.name, 'theme.info.yml');
-      if (!fs.existsSync(infoPath)) continue;
-      const raw = fs.readFileSync(infoPath, 'utf-8');
-      const info = yaml.load(raw) as Record<string, unknown>;
-      if (!info || typeof info !== 'object' || !info.name) continue;
-      const isDefault = activeTheme ? entry.name === activeTheme : false;
-      themes.push({
-        name: entry.name,
-        label: info.name as string,
-        description: (info.description as string) ?? '',
-        version: (info.version as string) ?? '0.0.0',
-        status: isDefault ? 'default' : 'installed',
-        default: isDefault,
-        admin: info.admin === true,
-        engine: (info.engine as string) ?? 'react',
-      });
-    }
-  }
-
-  // If no themes found, return a fallback
-  if (themes.length === 0) {
-    themes.push({
-      name: 'gin', label: 'Gin', description: 'A modern admin theme',
-      version: '1.0.0', status: 'default', default: true, admin: true, engine: 'next',
-    });
-  }
-
-  // If no default is set, mark the first non-admin theme or the first theme
-  if (!themes.some(t => t.default) && themes.length > 0) {
-    const fallback = themes.find(t => !t.admin) ?? themes[0];
-    fallback.default = true;
-    fallback.status = 'default';
-  }
-
-  return themes;
-}
 
 export interface ModuleWithStatus {
   name: string;
@@ -524,24 +458,21 @@ export async function getWebhooks(): Promise<Webhook[]> {
 
 export async function getMenus() {
   await ensureInitialized();
-  const conn = (await import('../../db/index')).getConnection();
-  const hasTable = await conn.schema.hasTable('menu_link_content_data');
-  if (!hasTable) return [];
-
-  try {
-    const rows = await conn('menu_link_content_data')
-      .select('menu_name')
-      .countDistinct('id as item_count')
-      .groupBy('menu_name');
-
-    return (rows as any[]).map(r => ({
-      id: r.menu_name,
-      label: r.menu_name.charAt(0).toUpperCase() + r.menu_name.slice(1).replace(/-/g, ' '),
-      item_count: Number(r.item_count),
-    }));
-  } catch {
-    return [];
-  }
+  const { loadConfig } = await import('../../core/config-storage');
+  const config = await loadConfig('system.menus');
+  const DEFAULT_MENUS = [
+    { id: 'main', label: 'Main navigation', description: 'Site-wide navigation links', items: [{ id: 'home', title: 'Home', url: '/', weight: 0, parent: null, enabled: true, expanded: false }] },
+    { id: 'footer', label: 'Footer', description: 'Links displayed in the site footer', items: [] as any[] },
+  ];
+  const menus = (config && typeof config === 'object' && Array.isArray((config as any).menus))
+    ? (config as any).menus
+    : DEFAULT_MENUS;
+  return menus.map((m: any) => ({
+    id: m.id,
+    label: m.label,
+    description: m.description,
+    item_count: m.items?.length ?? 0,
+  }));
 }
 
 export interface MenuItemData {
@@ -899,6 +830,47 @@ export async function getMediaList(params?: {
     })),
     meta: { total, page, limit, pages: Math.ceil(total / limit) },
   };
+}
+
+// ── Term Ancestors ──────────────────────────────────────────────────
+
+export interface TermAncestor {
+  tid: number;
+  title: string;
+  parent: number;
+}
+
+export async function getTermAncestors(vid: string, tid: number): Promise<TermAncestor[]> {
+  await ensureInitialized();
+
+  const ancestors: TermAncestor[] = [];
+  let currentTid = tid;
+  const visited = new Set<number>();
+
+  while (currentTid > 0 && !visited.has(currentTid)) {
+    visited.add(currentTid);
+
+    const rows = await db
+      .select('taxonomy_term_field_data', 'tfd')
+      .fields('tfd', ['tid', 'name'])
+      .leftJoin('taxonomy_term__parent', 'tp', 'tfd.tid = tp.entity_id')
+      .fields('tp', ['parent_target_id'])
+      .condition('tfd.tid', currentTid)
+      .condition('tfd.langcode', 'en')
+      .execute<{ tid: number; name: string; parent_target_id: number | null }>();
+
+    if (rows.length === 0) break;
+
+    const row = rows[0];
+    ancestors.unshift({
+      tid: row.tid,
+      title: row.name,
+      parent: row.parent_target_id ?? 0,
+    });
+    currentTid = row.parent_target_id ?? 0;
+  }
+
+  return ancestors;
 }
 
 // Re-export types for convenience

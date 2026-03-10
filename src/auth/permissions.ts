@@ -4,7 +4,12 @@ export interface PermissionDefinition {
   restrict?: boolean;
 }
 
-const permissionRegistry = new Map<string, PermissionDefinition>();
+// Stored on globalThis so webpack-externalized and tsx-loaded modules share the same instance.
+const g = globalThis as unknown as { __dropjs_permission_registry?: Map<string, PermissionDefinition> };
+if (!g.__dropjs_permission_registry) {
+  g.__dropjs_permission_registry = new Map<string, PermissionDefinition>();
+}
+const permissionRegistry = g.__dropjs_permission_registry;
 
 export function definePermissions(
   permissions: Record<string, PermissionDefinition>

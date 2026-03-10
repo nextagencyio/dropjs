@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createContentType } from '@/lib/api-entities';
+import { createContentType } from '@/app/(admin)/_actions/entity';
 
 function toMachineName(label: string): string {
   return label
@@ -41,11 +41,15 @@ export function ContentTypeAddForm() {
     setSubmitting(true);
 
     try {
-      await createContentType({
+      const result = await createContentType({
         bundle: machineName,
         label,
         description: description || undefined,
       });
+      if (!result.success) {
+        setError(result.error || 'Failed to create content type');
+        return;
+      }
       router.push('/structure/types');
     } catch (err) {
       setError(

@@ -39,8 +39,13 @@ export interface QueueItem {
 
 export type QueueWorker = (data: unknown) => Promise<void>;
 
-const workers = new Map<string, QueueWorker>();
-let processingInterval: ReturnType<typeof setInterval> | null = null;
+// Stored on globalThis for webpack module sharing.
+const gQueue = globalThis as unknown as {
+  __dropjs_queue_workers?: Map<string, QueueWorker>;
+  __dropjs_queue_interval?: ReturnType<typeof setInterval> | null;
+};
+if (!gQueue.__dropjs_queue_workers) gQueue.__dropjs_queue_workers = new Map<string, QueueWorker>();
+const workers = gQueue.__dropjs_queue_workers;
 
 export async function ensureQueueTable(): Promise<void> {
   await dbSchema.createTable('queue', QUEUE_TABLE);
@@ -214,9 +219,9 @@ export async function processQueue(name: string, maxItems: number = 100): Promis
  * Periodically checks all registered queues and processes items.
  */
 export function startQueueProcessor(intervalMs: number = 10_000): void {
-  if (processingInterval) return;
+  if (gQueue.__dropjs_queue_interval) return;
 
-  processingInterval = setInterval(async () => {
+  gQueue.__dropjs_queue_interval = setInterval(async () => {
     for (const name of workers.keys()) {
       try {
         await processQueue(name, 10);
@@ -233,9 +238,9 @@ export function startQueueProcessor(intervalMs: number = 10_000): void {
  * Stop the background queue processor.
  */
 export function stopQueueProcessor(): void {
-  if (processingInterval) {
-    clearInterval(processingInterval);
-    processingInterval = null;
+  if (gQueue.__dropjs_queue_interval) {
+    clearInterval(gQueue.__dropjs_queue_interval);
+    gQueue.__dropjs_queue_interval = null;
     logger.info('Queue processor stopped');
   }
 }

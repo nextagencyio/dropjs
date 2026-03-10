@@ -55,10 +55,21 @@ interface LoadedModule {
   enabled: boolean;
 }
 
-const moduleRegistry = new Map<string, LoadedModule>();
+// Stored on globalThis so webpack-externalized and tsx-loaded modules share the same instance.
+const gMod = globalThis as unknown as {
+  __dropjs_module_registry?: Map<string, LoadedModule>;
+  __dropjs_module_change_callbacks?: Array<() => void>;
+};
+if (!gMod.__dropjs_module_registry) {
+  gMod.__dropjs_module_registry = new Map<string, LoadedModule>();
+}
+if (!gMod.__dropjs_module_change_callbacks) {
+  gMod.__dropjs_module_change_callbacks = [];
+}
+const moduleRegistry = gMod.__dropjs_module_registry;
 
 // Callbacks invoked when modules change (e.g. route table / middleware cache invalidation).
-const onModuleChangeCallbacks: Array<() => void> = [];
+const onModuleChangeCallbacks = gMod.__dropjs_module_change_callbacks;
 
 /**
  * Register a callback that fires when modules are installed or uninstalled.
@@ -70,7 +81,7 @@ export function onModuleChange(callback: () => void): void {
 
 function notifyModuleChange(): void {
   // Invalidate cached middleware
-  cachedModuleMiddleware = null;
+  middlewareCache.value = null;
   for (const cb of onModuleChangeCallbacks) cb();
 }
 
@@ -216,15 +227,16 @@ export function getModuleRoutes(): ModuleRoute[] {
   return routes;
 }
 
-// Cached module middleware (invalidated on module change via notifyModuleChange)
-let cachedModuleMiddleware: ModuleMiddleware[] | null = null;
+// Cached module middleware — use a wrapper object on gMod for sharing.
+// The reference is invalidated on module change via notifyModuleChange.
+const middlewareCache = { value: null as ModuleMiddleware[] | null };
 
 /**
  * Collect all global middleware contributed by enabled modules.
  * Result is cached and invalidated when modules change.
  */
 export function getModuleMiddleware(): ModuleMiddleware[] {
-  if (cachedModuleMiddleware) return cachedModuleMiddleware;
+  if (middlewareCache.value) return middlewareCache.value;
   const mw: ModuleMiddleware[] = [];
   for (const loaded of moduleRegistry.values()) {
     if (!loaded.enabled) continue;
@@ -233,7 +245,7 @@ export function getModuleMiddleware(): ModuleMiddleware[] {
       mw.push(...def.middleware);
     }
   }
-  cachedModuleMiddleware = mw;
+  middlewareCache.value = mw;
   return mw;
 }
 
@@ -266,5 +278,5 @@ export async function loadEntityTypesFromDir(dir: string): Promise<void> {
 
 export function clearModuleRegistry(): void {
   moduleRegistry.clear();
-  cachedModuleMiddleware = null;
+  middlewareCache.value = null;
 }

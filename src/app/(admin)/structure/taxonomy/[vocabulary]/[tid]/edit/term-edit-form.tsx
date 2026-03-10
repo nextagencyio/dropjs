@@ -1,44 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  updateEntity,
-  fetchEntityList,
-  fetchTermAncestors,
-  type EntityData,
-  type TermAncestor,
-} from '@/lib/api-entities';
+import { updateEntity } from '@/app/(admin)/_actions/entity';
 
-function buildHierarchy(terms: EntityData[]): Array<EntityData & { _depth: number }> {
-  const byId = new Map<number, EntityData>();
-  for (const term of terms) {
-    if (term.nid != null) byId.set(term.nid, term);
-  }
+interface TermOption {
+  nid: number;
+  title: string;
+  _depth: number;
+}
 
-  const roots: EntityData[] = [];
-  const childrenMap = new Map<number, EntityData[]>();
-  for (const term of terms) {
-    const parentId = (term.parent as number) ?? 0;
-    if (parentId === 0 || !byId.has(parentId)) {
-      roots.push(term);
-    } else {
-      const siblings = childrenMap.get(parentId) ?? [];
-      siblings.push(term);
-      childrenMap.set(parentId, siblings);
-    }
-  }
-
-  const result: Array<EntityData & { _depth: number }> = [];
-  function walk(term: EntityData, depth: number) {
-    result.push({ ...term, _depth: depth });
-    for (const child of childrenMap.get(term.nid!) ?? []) {
-      walk(child, depth + 1);
-    }
-  }
-  for (const root of roots) walk(root, 0);
-  return result;
+interface TermAncestor {
+  tid: number;
+  title: string;
+  parent: number;
 }
 
 interface TermData {
@@ -54,11 +30,15 @@ export function TermEditForm({
   vocabLabel,
   tid,
   initialData,
+  availableTerms,
+  ancestors,
 }: {
   vocabulary: string;
   vocabLabel: string;
   tid: number;
   initialData: TermData;
+  availableTerms: TermOption[];
+  ancestors: TermAncestor[];
 }) {
   const router = useRouter();
 
@@ -69,45 +49,24 @@ export function TermEditForm({
   const [published, setPublished] = useState(initialData.published);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [availableTerms, setAvailableTerms] = useState<Array<EntityData & { _depth: number }>>([]);
-  const [ancestors, setAncestors] = useState<TermAncestor[]>([]);
-
-  useEffect(() => {
-    fetchEntityList('taxonomy_term', vocabulary, {
-      limit: 200,
-      sort: 'weight,title',
-    })
-      .then((res) => {
-        const filtered = res.data.filter((t) => t.nid !== tid);
-        setAvailableTerms(buildHierarchy(filtered));
-      })
-      .catch(() => {});
-  }, [vocabulary, tid]);
-
-  useEffect(() => {
-    fetchTermAncestors(vocabulary, tid)
-      .then(setAncestors)
-      .catch(() => setAncestors([]));
-  }, [vocabulary, tid]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
 
-    try {
-      await updateEntity('taxonomy_term', vocabulary, tid, {
-        title: name,
-        status: published,
-        weight,
-        parent,
-      });
+    const result = await updateEntity('taxonomy_term', vocabulary, tid, {
+      title: name,
+      status: published,
+      weight,
+      parent,
+    });
+    if (result.success) {
       router.push(`/structure/taxonomy/${vocabulary}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save term');
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError(result.error ?? 'Failed to save term');
     }
+    setSubmitting(false);
   };
 
   return (

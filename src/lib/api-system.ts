@@ -1,16 +1,5 @@
 import { apiFetch } from './api-client';
 
-export interface ThemeInfo {
-  name: string;
-  label: string;
-  description: string;
-  version: string;
-  status: string;
-  default: boolean;
-  admin: boolean;
-  engine: string;
-}
-
 export interface ModuleInfo {
   name: string;
   label: string;
@@ -44,18 +33,6 @@ export interface StatusReportData {
     heapUsed: number;
     external: number;
   };
-}
-
-export async function fetchThemes(): Promise<ThemeInfo[]> {
-  const res = await apiFetch<{ data: ThemeInfo[] }>('/appearance/themes');
-  return res.data;
-}
-
-export async function setActiveTheme(themeName: string): Promise<void> {
-  await apiFetch('/appearance/themes/active', {
-    method: 'POST',
-    body: JSON.stringify({ theme: themeName }),
-  });
 }
 
 export async function fetchModules(): Promise<ModuleInfo[]> {

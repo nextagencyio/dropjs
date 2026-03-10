@@ -47,7 +47,10 @@ function getTemplateContext(): MailTemplateContext {
   };
 }
 
-const templateRegistry = new Map<string, MailTemplateRenderer<any>>();
+// Stored on globalThis for webpack module sharing.
+const gMail = globalThis as unknown as { __dropjs_mail_template_registry?: Map<string, MailTemplateRenderer<any>> };
+if (!gMail.__dropjs_mail_template_registry) gMail.__dropjs_mail_template_registry = new Map<string, MailTemplateRenderer<any>>();
+const templateRegistry = gMail.__dropjs_mail_template_registry;
 
 /**
  * Register or override a mail template.

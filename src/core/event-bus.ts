@@ -51,4 +51,9 @@ class EventBusImpl {
   }
 }
 
-export const EventBus = new EventBusImpl();
+// Stored on globalThis for webpack module sharing.
+const gBus = globalThis as unknown as { __dropjs_event_bus?: EventBusImpl };
+if (!gBus.__dropjs_event_bus) {
+  gBus.__dropjs_event_bus = new EventBusImpl();
+}
+export const EventBus = gBus.__dropjs_event_bus;

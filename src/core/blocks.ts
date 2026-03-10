@@ -68,8 +68,12 @@ export interface ThemeRegions {
 }
 
 // ── Block Registry (in-memory) ─────────────────────────────────────────────
-
-const blockRegistry = new Map<string, BlockDefinition>();
+// Stored on globalThis for webpack module sharing.
+const gBlocks = globalThis as unknown as { __dropjs_block_registry?: Map<string, BlockDefinition> };
+if (!gBlocks.__dropjs_block_registry) {
+  gBlocks.__dropjs_block_registry = new Map<string, BlockDefinition>();
+}
+const blockRegistry = gBlocks.__dropjs_block_registry;
 
 /**
  * Register a block plugin definition.

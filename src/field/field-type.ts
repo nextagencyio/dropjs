@@ -37,8 +37,10 @@ export abstract class FieldType {
   }
 }
 
-// Global field type registry
-const fieldTypeRegistry = new Map<string, typeof FieldType>();
+// Global field type registry — stored on globalThis for webpack module sharing.
+const gField = globalThis as unknown as { __dropjs_field_type_registry?: Map<string, typeof FieldType> };
+if (!gField.__dropjs_field_type_registry) gField.__dropjs_field_type_registry = new Map<string, typeof FieldType>();
+const fieldTypeRegistry = gField.__dropjs_field_type_registry;
 
 export function registerFieldType(fieldType: typeof FieldType): void {
   if (!fieldType.type) {

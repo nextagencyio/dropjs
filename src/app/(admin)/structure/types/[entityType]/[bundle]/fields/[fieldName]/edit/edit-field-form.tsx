@@ -1,14 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  updateField,
-  fetchEntityTypes,
-  fetchVocabularies,
-  type FieldDefinition,
-} from '@/lib/api-entities';
+import { updateField } from '@/app/(admin)/_actions/entity';
+
+interface FieldDefinition {
+  type: string;
+  label: string;
+  required?: boolean;
+  cardinality?: number;
+  weight?: number;
+  settings?: Record<string, unknown>;
+}
+
+interface BundleOption {
+  value: string;
+  label: string;
+}
 
 const FIELD_TYPE_LABELS: Record<string, string> = {
   string: 'Text (plain)',
@@ -36,11 +45,15 @@ export function EditFieldForm({
   bundle,
   fieldName,
   fieldDef,
+  nodeTypes,
+  vocabularies,
 }: {
   entityType: string;
   bundle: string;
   fieldName: string;
   fieldDef: FieldDefinition;
+  nodeTypes: BundleOption[];
+  vocabularies: BundleOption[];
 }) {
   const router = useRouter();
 
@@ -65,23 +78,9 @@ export function EditFieldForm({
   const [precision, setPrecision] = useState(String(s.precision ?? 10));
   const [scale, setScale] = useState(String(s.scale ?? 2));
 
-  const [bundleOptions, setBundleOptions] = useState<{ value: string; label: string }[]>([]);
-
-  useEffect(() => {
-    if (fieldDef.type !== 'entity_reference') return;
-    if (targetType === 'node') {
-      fetchEntityTypes().then((types) => {
-        const nodeTypes = types.filter((t) => t.entity_type === 'node');
-        setBundleOptions(nodeTypes.map((t) => ({ value: t.bundle, label: t.label })));
-      }).catch(() => setBundleOptions([]));
-    } else if (targetType === 'taxonomy_term') {
-      fetchVocabularies().then((vocabs) => {
-        setBundleOptions(vocabs.map((v) => ({ value: v.bundle, label: v.label })));
-      }).catch(() => setBundleOptions([]));
-    } else {
-      setBundleOptions([]);
-    }
-  }, [fieldDef.type, targetType]);
+  const bundleOptions = fieldDef.type === 'entity_reference'
+    ? (targetType === 'node' ? nodeTypes : targetType === 'taxonomy_term' ? vocabularies : [])
+    : [];
 
   const buildSettings = (): Record<string, unknown> | undefined => {
     switch (fieldDef.type) {
@@ -121,20 +120,19 @@ export function EditFieldForm({
     setError('');
     setSubmitting(true);
 
-    try {
-      const settings = buildSettings();
-      await updateField(entityType, bundle, fieldName, {
-        label,
-        required,
-        cardinality: parseInt(cardinality, 10),
-        ...(settings !== undefined ? { settings } : {}),
-      });
+    const settings = buildSettings();
+    const result = await updateField(entityType, bundle, fieldName, {
+      label,
+      required,
+      cardinality: parseInt(cardinality, 10),
+      ...(settings !== undefined ? { settings } : {}),
+    });
+    if (result.success) {
       router.push(`/structure/types/${entityType}/${bundle}/fields`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update field');
-    } finally {
-      setSubmitting(false);
+    } else {
+      setError(result.error ?? 'Failed to update field');
     }
+    setSubmitting(false);
   };
 
   return (

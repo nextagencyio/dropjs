@@ -131,8 +131,12 @@ class CacheBackend {
   }
 }
 
-// Named cache bins (like Drupal's cache bins: default, entity, config, render, etc.)
-const bins = new Map<string, CacheBackend>();
+// Named cache bins — stored on globalThis for webpack module sharing.
+const gCache = globalThis as unknown as { __dropjs_cache_bins?: Map<string, CacheBackend> };
+if (!gCache.__dropjs_cache_bins) {
+  gCache.__dropjs_cache_bins = new Map<string, CacheBackend>();
+}
+const bins = gCache.__dropjs_cache_bins;
 
 /**
  * Get or create a cache bin.

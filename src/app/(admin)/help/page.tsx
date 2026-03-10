@@ -93,7 +93,6 @@ export default async function HelpPage() {
 const adminSections = [
   { name: 'Content', description: 'Create and manage content items like articles and pages.' },
   { name: 'Structure', description: 'Define content types, manage fields, and configure taxonomies.' },
-  { name: 'Appearance', description: 'Manage the visual presentation and theming of your site.' },
   { name: 'Extend', description: 'Enable and disable modules to extend site functionality.' },
   { name: 'Configuration', description: 'Configure site settings, media handling, and system behavior.' },
   { name: 'People', description: 'Manage user accounts, roles, and permissions.' },

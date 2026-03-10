@@ -2,7 +2,7 @@
 
 A Node.js CMS framework inspired by Drupal's best ideas, built for AI-assisted development.
 
-> Define content types in JSON. Get a full REST API instantly. Migrate from Drupal with one command.
+> Define content types in JSON. Get JSON:API, GraphQL, and GraphQL Compose endpoints instantly. Migrate from Drupal with one command.
 
 ## Why drop.js?
 
@@ -13,7 +13,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Taxonomy system** — Vocabularies and terms with hierarchical parent-child relationships
 - **Database agnostic** — SQLite for dev, MySQL/PostgreSQL for production — swap with one config change
 - **Drupal schema compatibility** — Node/taxonomy tables mirror Drupal's structure exactly
-- **Auto-generated API** — Every entity type gets REST endpoints automatically with filtering, sorting, pagination, and reference expansion
+- **Auto-generated API** — Every entity type gets JSON:API and GraphQL endpoints automatically
 - **OpenAPI/Swagger** — Auto-generated API documentation at `/api/docs`
 - **Views system** — Drupal Views-inspired configurable list builder with filters, sorts, pagination, exposed parameters, and live preview
 - **Block/Region system** — Layout management with visibility conditions, block placements, 8 default regions
@@ -22,11 +22,10 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **CORS** — Configurable cross-origin resource sharing with credential support and preflight handling
 - **Input sanitization** — Server-side HTML purification stripping XSS vectors (scripts, event handlers, javascript: URLs) while preserving safe markup
 - **Cache system** — In-memory cache with Drupal-style tag-based invalidation, named bins, entity/config cache wiring with automatic invalidation on CRUD
-- **Admin UI** — Full React admin panel with 52 pages covering content, structure, views, menus, blocks, comments, appearance, configuration, webhooks, languages, layout builder, URL patterns (pathauto), reports, media, user management, registration, password reset, content preview, REST resource management, actions/triggers, contact forms, and shortcuts
+- **Admin UI** — Full React admin panel covering content, structure, views, menus, blocks, comments, configuration, webhooks, languages, layout builder, URL patterns (pathauto), reports, media, user management, registration, password reset, content preview, REST resource management, actions/triggers, contact forms, and shortcuts
 - **Menu system** — Hierarchical navigation menus with drag-and-drop ordering, config-based storage
 - **Cron scheduler** — Tick-based job scheduler with EventBus integration and admin API
 - **Webhook system** — HTTP webhooks for entity lifecycle and system events with HMAC signing
-- **Theme system** — Discoverable themes with YAML metadata, region definitions, and admin UI for switching
 - **Module system** — Drupal-style extensible module architecture with route/middleware contribution, event hooks, dependency management, and enable/disable persistence
 - **Media library** — File uploads with image style processing, grid browser, search, and bulk operations
 - **URL aliases** — Human-readable paths with auto-generation on entity create/update and middleware-based resolution
@@ -102,114 +101,7 @@ src/
 
 ## Web Services
 
-drop.js replicates the API surface of Drupal core's REST module, JSON:API module, GraphQL module, and GraphQL Compose module.
-
-### REST API (Drupal core equivalent)
-
-Every entity type gets CRUD endpoints automatically — matching what Drupal's REST module provides out of the box:
-
-```
-GET    /api/node/article          — List articles (filter, sort, paginate, include references)
-GET    /api/node/article/:id      — Get single article
-POST   /api/node/article          — Create article
-PATCH  /api/node/article/:id      — Update article
-DELETE /api/node/article/:id      — Delete article
-```
-
-```
-GET /api/node/article?status=1&sort=-created&page[limit]=10&include=field_tags
-```
-
-The same pattern applies to all entity types: `taxonomy_term`, `user`, `comment`, `file`, `menu_link_content`, `block_content`, `paragraph`, etc.
-
-**Taxonomy**
-
-```
-GET    /api/taxonomy/vocabularies          — List vocabularies
-GET    /api/taxonomy/:vid/tree             — Get term hierarchy tree
-```
-
-Taxonomy terms use the standard entity endpoints (`/api/taxonomy_term/:vid`).
-
-**Revisions**
-
-```
-GET    /api/node/:bundle/:nid/revisions              — List revisions
-GET    /api/node/:bundle/:nid/revisions/:vid          — Load specific revision
-POST   /api/node/:bundle/:nid/revisions/:vid/revert   — Revert to revision
-```
-
-**Files & Media**
-
-```
-POST   /api/files/upload             — Upload file (multipart, 50MB max)
-GET    /api/files/:id                — Get file metadata
-GET    /api/files/:id/download       — Download file
-GET    /api/files/:id/style/:style   — Get styled image (thumbnail, medium, large)
-DELETE /api/files/:id                — Delete file
-```
-
-**Comments**
-
-```
-GET    /api/comments?entity_type=...&entity_id=...  — List comments for an entity
-GET    /api/comments/:cid           — Get single comment
-POST   /api/comments                — Create comment
-PATCH  /api/comments/:cid           — Update comment
-DELETE /api/comments/:cid           — Delete comment
-```
-
-**Menus**
-
-```
-GET    /api/menus                        — List menus
-GET    /api/menus/:menuId                — Get menu with tree
-POST   /api/menus/:menuId/items          — Add menu link
-PATCH  /api/menus/:menuId/items/:itemId  — Update menu link
-DELETE /api/menus/:menuId/items/:itemId  — Delete menu link
-```
-
-**Translations**
-
-```
-GET    /api/languages                                        — List all languages
-GET    /api/:entityType/:bundle/:id/translations             — Get translation status
-GET    /api/:entityType/:bundle/:id/translations/:langcode   — Get specific translation
-POST   /api/:entityType/:bundle/:id/translations/:langcode   — Create translation
-PATCH  /api/:entityType/:bundle/:id/translations/:langcode   — Update translation
-DELETE /api/:entityType/:bundle/:id/translations/:langcode   — Delete translation
-```
-
-**Content Moderation**
-
-```
-GET    /api/workflows/:id/transitions/:state        — Get available transitions
-POST   /api/:entityType/:bundle/:id/moderation      — Apply moderation transition
-GET    /api/:entityType/:bundle/:id/moderation      — Get moderation history
-```
-
-**Search**
-
-```
-GET    /api/search?q=...&type=...&bundle=...  — Full-text search (FTS5 with porter stemming)
-```
-
-**Contact**
-
-```
-POST   /api/contact/submit              — Submit a contact message
-```
-
-**Authentication**
-
-```
-GET    /api/csrf-token                  — Get CSRF token
-POST   /api/auth/login                  — Authenticate
-POST   /api/auth/register               — Register user
-POST   /api/auth/logout                 — End session
-POST   /api/auth/forgot-password        — Request password reset token
-POST   /api/auth/reset-password         — Reset password with token
-```
+drop.js replicates the API surface of Drupal's JSON:API, GraphQL, and GraphQL Compose modules.
 
 ### JSON:API (drupal/jsonapi equivalent)
 
@@ -396,8 +288,6 @@ GET/PATCH  /api/config/site                   — Site information
 GET/POST   /api/config/text-formats            — Text formats
 GET/POST   /api/config/image-styles            — Image styles
 GET/POST   /api/aliases                        — URL aliases
-GET        /api/appearance/themes              — List themes
-POST       /api/appearance/themes/active       — Set active theme
 GET/POST   /api/modules/:name/enable|disable   — Module management
 GET/POST   /api/config/export|import|diff      — Config sync
 ```
@@ -440,9 +330,6 @@ The React admin panel (Next.js 15 / React 19) provides a full management interfa
 - **Views** — Configurable list builder with filters, sorts, field selection, pagination, and live preview
 - **Menus** — Create menus, add/edit/delete links, hierarchical ordering
 - **Taxonomy** — Vocabularies and hierarchical terms with parent-child relationships
-
-### Appearance
-- **Themes** — View installed themes, set active theme
 
 ### Modules
 - **Extend** — Enable/disable modules with persistent configuration
@@ -562,26 +449,6 @@ EventBus.on('entity:presave', async (entity) => {
 
 Events: `entity:presave`, `entity:insert`, `entity:update`, `entity:delete`, `entity:load`, `entity_query:alter`, `system:boot`, `system:cron`.
 
-## Theme System
-
-Themes are defined with YAML metadata:
-
-```yaml
-# themes/my_theme/theme.info.yml
-name: My Theme
-type: theme
-description: A custom theme
-version: 1.0.0
-engine: react
-regions:
-  header: Header
-  content: Content
-  sidebar: Sidebar
-  footer: Footer
-```
-
-Manage themes via the admin UI at `/admin/appearance` or the REST API.
-
 ## Drupal 11 Compatibility
 
 drop.js generates a single SQLite database (`drop.db`) that is **verified to boot a real Drupal 11 site**. Copy the file into a Drupal installation's `sites/default/files/` directory, point `settings.php` at it, and Drupal runs — cache rebuild, content rendering, JSON:API, admin login all work.
@@ -596,6 +463,7 @@ drop.js generates a single SQLite database (`drop.db`) that is **verified to boo
 - **Infrastructure** — `sessions`, `watchdog`, `flood`, `history`, `batch`, `menu_tree`, `router`, `semaphore`, `block_content`, `menu_link_content` tables
 - **Roles & permissions** — PHP-serialized role configs (`user.role.*`) with Drupal metadata (uuid, langcode, status)
 - **Core extension** — `core.extension` config listing 20 installed modules and the Claro theme
+- **Theme config** — `system.theme` config stored in the database for Drupal compatibility (drop.js does not have a theme system — the admin UI is a built-in React application)
 
 ### E2E verified
 

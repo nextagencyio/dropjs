@@ -71,8 +71,10 @@ interface ActionTriggerRow {
 }
 
 // ─── In-Memory Action Registry ───────────────────────────────────
-
-const actionRegistry = new Map<string, ActionDefinition>();
+// Stored on globalThis for webpack module sharing.
+const gActions = globalThis as unknown as { __dropjs_action_registry?: Map<string, ActionDefinition> };
+if (!gActions.__dropjs_action_registry) gActions.__dropjs_action_registry = new Map<string, ActionDefinition>();
+const actionRegistry = gActions.__dropjs_action_registry;
 
 // ─── Row Conversion ──────────────────────────────────────────────
 

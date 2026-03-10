@@ -41,7 +41,7 @@ export async function createEntity(
       uid: auth.user.uid,
     });
     revalidatePath('/content');
-    return { success: true, data: entity };
+    return { success: true, data: entity.toJSON() };
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }
@@ -166,6 +166,69 @@ export async function addField(
 
     revalidatePath(`/structure/types/${entityType}/${bundle}/fields`);
     return { success: true, data: def.fields[field.name] };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updateContentType(
+  entityType: string,
+  bundle: string,
+  data: { label?: string; description?: string },
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer content types');
+  if (!auth.success) return auth;
+
+  try {
+    const def = getEntityTypeDefinition(entityType, bundle);
+    if (!def) return { success: false, error: 'Entity type not found' };
+
+    if (data.label !== undefined) def.label = data.label;
+    if (data.description !== undefined) def.description = data.description;
+
+    registerEntityType(def);
+
+    revalidatePath('/structure/types');
+    revalidatePath(`/structure/types/${entityType}/${bundle}`);
+    return { success: true, data: def };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updateField(
+  entityType: string,
+  bundle: string,
+  fieldName: string,
+  data: {
+    label?: string;
+    required?: boolean;
+    cardinality?: number;
+    settings?: Record<string, unknown>;
+  },
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer content types');
+  if (!auth.success) return auth;
+
+  try {
+    const def = getEntityTypeDefinition(entityType, bundle);
+    if (!def) return { success: false, error: 'Entity type not found' };
+
+    const field = def.fields[fieldName];
+    if (!field) return { success: false, error: 'Field not found' };
+
+    if (data.label !== undefined) field.label = data.label;
+    if (data.required !== undefined) field.required = data.required;
+    if (data.cardinality !== undefined) field.cardinality = data.cardinality;
+    if (data.settings !== undefined) field.settings = data.settings;
+
+    registerEntityType(def);
+
+    revalidatePath(`/structure/types/${entityType}/${bundle}/fields`);
+    revalidatePath(`/structure/types/${entityType}/${bundle}/fields/${fieldName}/edit`);
+    return { success: true, data: { name: fieldName, ...field } };
   } catch (err) {
     return { success: false, error: (err as Error).message };
   }

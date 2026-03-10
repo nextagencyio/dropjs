@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getEntityType } from '@/lib/server/data';
+import { getEntityType, getEntityTypes, getVocabularies } from '@/lib/server/data';
 import { EditFieldForm } from './edit-field-form';
 
 export default async function EditFieldPage({
@@ -9,11 +9,20 @@ export default async function EditFieldPage({
 }) {
   const { entityType, bundle, fieldName } = await params;
 
-  const typeDef = await getEntityType(entityType, bundle);
+  const [typeDef, allTypes, vocabs] = await Promise.all([
+    getEntityType(entityType, bundle),
+    getEntityTypes(),
+    getVocabularies(),
+  ]);
   if (!typeDef) notFound();
 
   const fieldDef = typeDef.fields[fieldName];
   if (!fieldDef) notFound();
+
+  const nodeTypes = allTypes
+    .filter((t) => t.entity_type === 'node')
+    .map((t) => ({ value: t.bundle, label: t.label }));
+  const vocabularies = vocabs.map((v) => ({ value: v.bundle, label: v.label }));
 
   return (
     <EditFieldForm
@@ -21,6 +30,8 @@ export default async function EditFieldPage({
       bundle={bundle}
       fieldName={fieldName}
       fieldDef={fieldDef}
+      nodeTypes={nodeTypes}
+      vocabularies={vocabularies}
     />
   );
 }

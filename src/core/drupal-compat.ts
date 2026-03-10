@@ -68,27 +68,29 @@ const DRUPAL_SEMAPHORE_TABLE: TableDefinition = {
   fields: {
     name: { type: 'varchar', length: 255, nullable: false },
     value: { type: 'varchar', length: 255, nullable: false },
-    expire: { type: 'varchar', length: 14, nullable: false },
+    expire: { type: 'float', nullable: false },
   },
   primaryKey: ['name'],
   indexes: {
+    semaphore__value: ['value'],
     semaphore__expire: ['expire'],
   },
 };
 
 const DRUPAL_ROUTER_TABLE: TableDefinition = {
   fields: {
-    name: { type: 'varchar', length: 255, nullable: false },
-    path: { type: 'varchar', length: 255, nullable: true, default: '' },
-    pattern_outline: { type: 'varchar', length: 255, nullable: true, default: '' },
-    fit: { type: 'int', nullable: true, default: 0 },
+    name: { type: 'varchar', length: 255, nullable: false, default: '' },
+    path: { type: 'varchar', length: 255, nullable: false, default: '' },
+    pattern_outline: { type: 'varchar', length: 255, nullable: false, default: '' },
+    fit: { type: 'int', nullable: false, default: 0 },
     route: { type: 'blob', nullable: true },
-    number_parts: { type: 'int', unsigned: true, nullable: true, default: 0 },
+    number_parts: { type: 'int', nullable: false, default: 0 },
     alias: { type: 'varchar', length: 255, nullable: true },
   },
   primaryKey: ['name'],
   indexes: {
     pattern_outline_parts: ['pattern_outline', 'number_parts'],
+    router__alias: ['alias'],
   },
 };
 

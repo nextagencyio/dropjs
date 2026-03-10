@@ -525,19 +525,23 @@ export async function getWebhooks(): Promise<Webhook[]> {
 export async function getMenus() {
   await ensureInitialized();
   const conn = (await import('../../db/index')).getConnection();
-  const hasTable = await conn.schema.hasTable('menu_link_content');
+  const hasTable = await conn.schema.hasTable('menu_link_content_data');
   if (!hasTable) return [];
 
-  const rows = await conn('menu_link_content')
-    .select('menu_name')
-    .countDistinct('id as item_count')
-    .groupBy('menu_name');
+  try {
+    const rows = await conn('menu_link_content_data')
+      .select('menu_name')
+      .countDistinct('id as item_count')
+      .groupBy('menu_name');
 
-  return (rows as any[]).map(r => ({
-    id: r.menu_name,
-    label: r.menu_name.charAt(0).toUpperCase() + r.menu_name.slice(1).replace(/-/g, ' '),
-    item_count: Number(r.item_count),
-  }));
+    return (rows as any[]).map(r => ({
+      id: r.menu_name,
+      label: r.menu_name.charAt(0).toUpperCase() + r.menu_name.slice(1).replace(/-/g, ' '),
+      item_count: Number(r.item_count),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export interface MenuItemData {

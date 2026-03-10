@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
+import fs from 'node:fs';
 
 const nextConfig: NextConfig = {
   webpack: (config, { isServer }) => {
@@ -32,7 +33,19 @@ const nextConfig: NextConfig = {
             try {
               const resolved = path.resolve(context, request);
               if (coreDirs.some((dir) => resolved.startsWith(dir))) {
-                return callback(null, 'commonjs ' + resolved);
+                // Resolve to the actual .ts file path so Node.js module cache
+                // keys match between init-time imports (with .js extension via tsx)
+                // and runtime require() from webpack externals.
+                let resolvedPath = resolved;
+                if (!path.extname(resolved)) {
+                  for (const ext of ['.ts', '.tsx', '.js']) {
+                    if (fs.existsSync(resolved + ext)) {
+                      resolvedPath = resolved + ext;
+                      break;
+                    }
+                  }
+                }
+                return callback(null, 'commonjs ' + resolvedPath);
               }
             } catch {
               // ignore resolution errors

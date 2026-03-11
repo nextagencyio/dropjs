@@ -70,7 +70,7 @@ export async function migrateDrupalRun(options: {
   }
 
   // Ensure data directory exists for SQLite
-  if (dbConfig.client === 'sqlite3' && dbConfig.connection?.filename) {
+  if (dbConfig.client === 'sqlite3' && typeof dbConfig.connection === 'object' && dbConfig.connection?.filename) {
     const dir = path.dirname(dbConfig.connection.filename);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });

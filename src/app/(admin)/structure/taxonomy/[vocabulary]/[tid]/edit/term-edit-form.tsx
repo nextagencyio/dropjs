@@ -63,6 +63,7 @@ export function TermEditForm({
     });
     if (result.success) {
       router.push(`/structure/taxonomy/${vocabulary}`);
+      router.refresh();
     } else {
       setError(result.error ?? 'Failed to save term');
     }

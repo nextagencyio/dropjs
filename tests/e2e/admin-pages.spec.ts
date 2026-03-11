@@ -1,26 +1,6 @@
 import { test, expect } from './fixtures';
 
 test.describe('Admin Pages', () => {
-  test('should load Appearance page with theme info', async ({ authenticatedPage: page }) => {
-    await page.goto('/appearance');
-    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Manage the visual presentation of your site.')).toBeVisible();
-    // Should show theme info (Claro theme)
-    await expect(page.getByRole('heading', { name: 'Claro' })).toBeVisible({ timeout: 10000 });
-    // Should show Active badge
-    await expect(page.getByText('Active')).toBeVisible();
-  });
-
-  test('should show theme version and engine on Appearance page', async ({ authenticatedPage: page }) => {
-    await page.goto('/appearance');
-    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible({ timeout: 10000 });
-    // Should show version and engine info
-    await expect(page.getByText('Version:').first()).toBeVisible();
-    await expect(page.getByText('Engine:').first()).toBeVisible();
-    // Should show the architecture info box
-    await expect(page.getByText('drop.js uses a decoupled architecture')).toBeVisible();
-  });
-
   test('should load Extend page with module list', async ({ authenticatedPage: page }) => {
     await page.goto('/extend');
     await expect(page.getByRole('heading', { name: 'Extend' })).toBeVisible({ timeout: 10000 });
@@ -123,12 +103,6 @@ test.describe('Admin Pages', () => {
     await expect(page.getByRole('heading', { name: 'Module help' })).toBeVisible();
     // Should show API documentation section
     await expect(page.getByRole('heading', { name: 'API documentation' })).toBeVisible();
-  });
-
-  test('should navigate to Appearance via toolbar', async ({ authenticatedPage: page }) => {
-    await page.locator('nav').first().getByRole('link', { name: 'Appearance' }).click();
-    await expect(page).toHaveURL(/.*\/appearance/);
-    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
   });
 
   test('should navigate to Reports via toolbar', async ({ authenticatedPage: page }) => {

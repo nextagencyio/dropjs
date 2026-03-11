@@ -61,11 +61,14 @@ export async function updateEntity(
     const entity = await Entity.load(entityType, id);
     if (!entity) return { success: false, error: 'Entity not found' };
     for (const [key, value] of Object.entries(data)) {
-      (entity as any)[key] = value;
+      entity.set(key, value);
     }
     await entity.save();
     revalidatePath('/content');
     revalidatePath(`/node/${id}/edit`);
+    if (entityType === 'taxonomy_term') {
+      revalidatePath(`/structure/taxonomy/${bundle}`);
+    }
     return { success: true, data: entity.toJSON() };
   } catch (err) {
     return { success: false, error: (err as Error).message };

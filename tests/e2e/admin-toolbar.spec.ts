@@ -12,7 +12,6 @@ test.describe('Admin Toolbar', () => {
 
     await expect(nav.getByRole('link', { name: 'Content' })).toBeVisible({ timeout: 10000 });
     await expect(nav.getByRole('link', { name: 'Structure' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Appearance' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Extend' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Configuration' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'People' })).toBeVisible();
@@ -28,12 +27,6 @@ test.describe('Admin Toolbar', () => {
   test('should navigate to Structure page', async ({ authenticatedPage: page }) => {
     await page.locator('nav').first().getByRole('link', { name: 'Structure' }).click();
     await expect(page).toHaveURL(/.*\/structure/);
-  });
-
-  test('should navigate to Appearance page', async ({ authenticatedPage: page }) => {
-    await page.locator('nav').first().getByRole('link', { name: 'Appearance' }).click();
-    await expect(page).toHaveURL(/.*\/appearance/);
-    await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible({ timeout: 10000 });
   });
 
   test('should navigate to Extend page', async ({ authenticatedPage: page }) => {

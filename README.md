@@ -22,7 +22,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **CORS** — Configurable cross-origin resource sharing with credential support and preflight handling
 - **Input sanitization** — Server-side HTML purification stripping XSS vectors (scripts, event handlers, javascript: URLs) while preserving safe markup
 - **Cache system** — In-memory cache with Drupal-style tag-based invalidation, named bins, entity/config cache wiring with automatic invalidation on CRUD
-- **Admin UI** — Full React admin panel covering content, structure, views, menus, blocks, comments, configuration, webhooks, languages, layout builder, URL patterns (pathauto), reports, media, user management, registration, password reset, content preview, REST resource management, actions/triggers, contact forms, and shortcuts
+- **Admin UI** — Full React admin panel covering content, structure, views, menus, blocks, comments, appearance/themes, configuration, webhooks, languages, layout builder, URL patterns (pathauto), reports, media, user management, registration, password reset, content preview, REST resource management, actions/triggers, contact forms, and shortcuts
 - **Menu system** — Hierarchical navigation menus with drag-and-drop ordering, config-based storage
 - **Cron scheduler** — Tick-based job scheduler with EventBus integration and admin API
 - **Webhook system** — HTTP webhooks for entity lifecycle and system events with HMAC signing
@@ -55,8 +55,8 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **CI pipeline** — GitHub Actions with type checking, unit tests (Vitest), and E2E tests (Playwright)
 - **Authentication** — Users, roles, 21 permissions, entity-level access control, sessions, CSRF protection, rate limiting, registration, and password reset
 - **Drupal migration** — Read a Drupal database and migrate content directly
-- **E2E tested** — 382+ Playwright tests across 42 specs covering the full stack
-- **Unit tested** — 197 Vitest tests across 12 files
+- **E2E tested** — 378+ Playwright tests across 42 specs covering the full stack
+- **Unit tested** — 277 Vitest tests across 12 files
 - **Search API** — Native full-text search (SQLite FTS5, PostgreSQL tsvector/tsquery) with porter stemming across all entity types
 - **Rate limiting** — In-memory sliding window rate limiter (5/min auth, 30/min mutations, 100/min reads) with `X-RateLimit-*` headers
 - **HTTP caching** — `Cache-Control`, `ETag`, `Last-Modified` headers on file serving; CDN-friendly `s-maxage` + `stale-while-revalidate` for public API responses
@@ -77,9 +77,9 @@ npm install
 # Start dev server (SQLite, zero config)
 npm run dev
 
-# API is live at http://localhost:3000/api
-# Admin UI at http://localhost:3000
-# Swagger docs at http://localhost:3000/api/docs
+# API is live at http://localhost:3847/api
+# Admin UI at http://localhost:3847
+# Swagger docs at http://localhost:3847/api/docs
 ```
 
 ## Project Structure
@@ -334,6 +334,9 @@ The React admin panel (Next.js 15 / React 19) provides a full management interfa
 ### Modules
 - **Extend** — Enable/disable modules with persistent configuration
 
+### Appearance
+- **Themes** — View installed themes, set default (public) and administration themes
+
 ### Configuration
 - **Site information** — Name, slogan, email, front page
 - **Text formats** — Configure allowed HTML tags per format
@@ -533,7 +536,7 @@ CI runs type checking, unit tests, and E2E tests on every push and PR via GitHub
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | API server port | `3000` |
+| `PORT` | API server port | `3847` |
 | `DATABASE_URL` | PostgreSQL connection string (Supabase, Railway, etc.) | — |
 | `DB_SSL` | Enable SSL for database connection (`1`) | — |
 | `DROP_DATA_DIR` | Data directory path | `./data` |

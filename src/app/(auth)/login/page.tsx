@@ -36,12 +36,12 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-[420px]">
       <div className="bg-gin-bg-layer rounded-gin-l p-6 sm:p-10 border border-gin-border/60 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
-        <div className="text-center mb-9">
-          <div className="inline-flex items-center justify-center mb-5">
-            <Image src="/logo.png" alt="drop.js" width={72} height={99} className="drop-shadow-sm" priority />
+        <div className="text-center mb-6 sm:mb-9">
+          <div className="inline-flex items-center justify-center mb-3 sm:mb-5">
+            <Image src="/logo.png" alt="drop.js" width={56} height={77} className="drop-shadow-sm sm:w-[72px] sm:h-[99px]" priority />
           </div>
-          <h1 className="text-[26px] font-bold text-gin-title tracking-tight leading-tight">drop.js</h1>
-          <p className="text-sm mt-2 text-gin-text-light font-medium">Log in to your account</p>
+          <h1 className="text-[22px] sm:text-[26px] font-bold text-gin-title tracking-tight leading-tight">drop.js</h1>
+          <p className="text-sm mt-1.5 sm:mt-2 text-gin-text-light font-medium">Log in to your account</p>
         </div>
 
         {error && (
@@ -52,8 +52,8 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="mb-5">
-            <label htmlFor="username" className="block text-[13px] font-semibold text-gin-title mb-2">
+          <div className="mb-4 sm:mb-5">
+            <label htmlFor="username" className="block text-[13px] font-semibold text-gin-title mb-1.5 sm:mb-2">
               Username
             </label>
             <input
@@ -68,8 +68,8 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="mb-8">
-            <label htmlFor="password" className="block text-[13px] font-semibold text-gin-title mb-2">
+          <div className="mb-6 sm:mb-8">
+            <label htmlFor="password" className="block text-[13px] font-semibold text-gin-title mb-1.5 sm:mb-2">
               Password
             </label>
             <input

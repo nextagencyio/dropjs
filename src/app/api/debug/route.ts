@@ -1,6 +1,4 @@
 import { ensureInitialized } from '@/api/init';
-import { loadUserByName } from '@/auth/user';
-import { getAllEntityTypes } from '@/core/entity-types';
 
 export const maxDuration = 60;
 
@@ -8,12 +6,16 @@ export async function GET() {
   const steps: string[] = [];
   try {
     steps.push('Starting init...');
+    const start = Date.now();
     await ensureInitialized();
-    steps.push('Init complete');
+    steps.push(`Init complete in ${Date.now() - start}ms`);
 
+    // Use dynamic imports for server-only modules
+    const { getAllEntityTypes } = await import('@/core/entity-types');
     const types = getAllEntityTypes();
     steps.push(`Entity types: ${types.length}`);
 
+    const { loadUserByName } = await import('@/auth/user');
     const admin = await loadUserByName('admin');
     steps.push(`Admin user: ${admin ? 'found uid=' + admin.uid : 'NOT FOUND'}`);
 

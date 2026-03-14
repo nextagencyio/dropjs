@@ -217,11 +217,16 @@ async function doInit(): Promise<void> {
   // Ensure URL alias table
   await ensureUrlAliasTable();
 
-  // Configure uploads directory
-  const uploadsDir = path.resolve(process.env.UPLOADS_DIR || 'data/files');
+  // Configure uploads directory (use /tmp on read-only filesystems like Vercel)
+  const defaultUploadsDir = process.env.VERCEL ? '/tmp/data/files' : 'data/files';
+  const uploadsDir = path.resolve(process.env.UPLOADS_DIR || defaultUploadsDir);
   setUploadsDir(uploadsDir);
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+  } catch {
+    // Read-only filesystem — uploads will fail but API still works
   }
 
   // Ensure subsystem tables (previously only ran on first API request)

@@ -22,20 +22,27 @@ export default async function DashboardPage() {
   const allTypes = await getEntityTypes();
   const nodeTypes = allTypes.filter((t) => t.entity_type === 'node');
 
-  const countPromises = nodeTypes.map(async (t) => {
-    const res = await listEntities(t.entity_type, t.bundle, { limit: 1 });
-    return { label: t.label, entityType: t.entity_type, bundle: t.bundle, total: res.meta.total };
-  });
+  let contentCounts: ContentCount[] = [];
+  let recentResults: (EntityData & { _entityType: string; _bundle: string; _label: string })[][] = [];
 
-  const recentPromises = nodeTypes.map(async (t) => {
-    const res = await listEntities(t.entity_type, t.bundle, { limit: 10, sort: '-changed' });
-    return res.data.map((d) => ({ ...d, _entityType: t.entity_type, _bundle: t.bundle, _label: t.label }));
-  });
+  try {
+    const countPromises = nodeTypes.map(async (t) => {
+      const res = await listEntities(t.entity_type, t.bundle, { limit: 1 });
+      return { label: t.label, entityType: t.entity_type, bundle: t.bundle, total: res.meta.total };
+    });
 
-  const [contentCounts, recentResults] = await Promise.all([
-    Promise.all(countPromises),
-    Promise.all(recentPromises),
-  ]);
+    const recentPromises = nodeTypes.map(async (t) => {
+      const res = await listEntities(t.entity_type, t.bundle, { limit: 10, sort: '-changed' });
+      return res.data.map((d) => ({ ...d, _entityType: t.entity_type, _bundle: t.bundle, _label: t.label }));
+    });
+
+    [contentCounts, recentResults] = await Promise.all([
+      Promise.all(countPromises),
+      Promise.all(recentPromises),
+    ]);
+  } catch (err) {
+    console.error('Dashboard listEntities error:', err);
+  }
 
   const recentContent = recentResults
     .flat()

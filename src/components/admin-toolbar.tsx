@@ -103,7 +103,7 @@ export function AdminToolbar({ user, logout }: AdminToolbarProps) {
 
   return (
     <nav
-      className={`fixed top-0 left-0 h-screen flex flex-col z-50 overflow-hidden bg-white border-r border-gin-border transition-all duration-250 ease-in-out ${
+      className={`fixed top-0 left-0 h-dvh flex flex-col z-50 overflow-hidden bg-white border-r border-gin-border transition-all duration-250 ease-in-out ${
         expanded ? 'w-[264px]' : 'w-16'
       }`}
     >

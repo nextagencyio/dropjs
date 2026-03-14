@@ -47,10 +47,10 @@ export function AdminShell({
   };
 
   return (
-    <div className="min-h-screen bg-gin-bg-app">
+    <div className="min-h-dvh bg-gin-bg-app">
       <AdminToolbar user={toolbarUser} logout={handleLogout} />
 
-      <div className="ml-16 min-h-screen flex flex-col">
+      <div className="ml-16 min-h-dvh flex flex-col">
         {/* Secondary top bar */}
         <header className="sticky top-0 z-40 flex items-center justify-between h-[52px] bg-white/95 backdrop-blur-sm border-b border-gin-border px-3 sm:px-6 shadow-sm">
           <nav className="flex items-center gap-1 sm:gap-1.5 text-sm min-w-0 overflow-hidden">

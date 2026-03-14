@@ -992,17 +992,23 @@ export async function getPublishedNodes(params: {
   let total = 0;
 
   for (const bundle of params.bundles) {
-    const filters: Record<string, string> = { status: '1' };
-    if (params.promote) filters.promote = '1';
+    const query = new EntityQuery('node');
+    query.condition('type', bundle);
+    query.condition('status', 1);
+    if (params.promote) query.condition('promote', 1);
+    query.sort('created', 'DESC');
 
-    const result = await listEntities('node', bundle, {
-      filters,
-      sort: '-created',
-      limit: params.limit ?? 1000,
-      offset: params.offset ?? 0,
-    });
-    allData.push(...result.data);
-    total += result.meta.total;
+    const allIds = await query.execute();
+    total += allIds.length;
+
+    const offset = params.offset ?? 0;
+    const limit = params.limit ?? 1000;
+    const pageIds = allIds.slice(offset, offset + limit);
+
+    for (const id of pageIds) {
+      const entity = await Entity.load('node', id);
+      if (entity) allData.push(entity.toJSON());
+    }
   }
 
   return { data: allData as unknown as PublishedNode[], total };

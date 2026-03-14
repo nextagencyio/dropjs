@@ -34,7 +34,7 @@ export async function serve(): Promise<void> {
   // Create HTTP server
   const server = http.createServer(async (req, res) => {
     try {
-      if (req.url?.startsWith('/api/')) {
+      if (req.url?.startsWith('/api/') && !req.url?.startsWith('/api/auth/')) {
         await handleApiRequest(req, res);
       } else {
         nextHandler(req, res);

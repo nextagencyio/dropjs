@@ -52,7 +52,7 @@ export async function startDev(): Promise<void> {
         return;
       }
 
-      if (req.url?.startsWith('/api/')) {
+      if (req.url?.startsWith('/api/') && !req.url?.startsWith('/api/auth/')) {
         await handleApiRequest(req, res);
       } else if (nextHandler) {
         nextHandler(req, res);

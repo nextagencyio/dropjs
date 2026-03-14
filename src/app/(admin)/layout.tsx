@@ -9,13 +9,7 @@ export default async function AdminGroupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let user;
-  try {
-    user = await requireAuth();
-  } catch (err) {
-    console.error('[AdminLayout] requireAuth failed:', err);
-    throw err;
-  }
+  const user = await requireAuth();
 
   return (
     <AdminShell user={{ uid: user.uid!, name: user.name, email: user.email, roles: user.roles }}>

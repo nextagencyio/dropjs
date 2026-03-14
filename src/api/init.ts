@@ -114,7 +114,10 @@ async function doInit(): Promise<void> {
   if (process.env.DATABASE_URL) {
     dbConfig = {
       client: 'pg',
-      connection: process.env.DATABASE_URL,
+      connection: {
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DB_SSL === '1' ? { rejectUnauthorized: false } : undefined,
+      },
     };
   }
   // Environment-based database config (for production / Docker)
@@ -201,8 +204,8 @@ async function doInit(): Promise<void> {
   // Seed default workflow
   await seedDefaultWorkflow();
 
-  // Start background tasks (skip in test mode)
-  if (process.env.NODE_ENV !== 'test') {
+  // Start background tasks (skip in test mode and serverless environments)
+  if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     registerDefaultCronJobs();
     registerSchedulerCronJob();
     registerLockCleanupCronJob();

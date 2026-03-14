@@ -1,12 +1,6 @@
-import http from 'node:http';
+import { spawn } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { destroyConnection } from '../../db/index.js';
-import { stopCron, stopQueueProcessor, createLogger } from '../../core/index.js';
-import { ensureInitialized } from '../../api/init.js';
-import { handleApiRequest } from '../../api/request-handler.js';
-
-const logger = createLogger('serve');
 
 /** Resolve the package root (where .next/ lives) for Next.js */
 function getPackageRoot(): string {
@@ -17,55 +11,33 @@ function getPackageRoot(): string {
 export async function serve(): Promise<void> {
   console.log('Starting drop.js production server...\n');
 
-  // Initialize all subsystems (DB, entity types, auth, hooks, cron, queues, etc.)
-  await ensureInitialized();
-
-  console.log('Database connected.');
-  console.log('Entity types loaded.');
-  console.log('Auth system initialized.');
-
-  // Prepare Next.js in production mode
+  // Start Next.js production server — it handles all routing including /api/*
+  // via the catch-all route at src/app/api/[...slug]/route.ts
+  // Initialization happens via instrumentation.ts on server startup.
   const packageRoot = getPackageRoot();
-  const next = (await import('next')).default as unknown as (opts: { dev: boolean; dir: string }) => any;
-  const nextApp = next({ dev: false, dir: packageRoot });
-  await nextApp.prepare();
-  const nextHandler = nextApp.getRequestHandler();
+  const port = process.env.PORT || '3000';
 
-  // Create HTTP server
-  const server = http.createServer(async (req, res) => {
-    try {
-      if (req.url?.startsWith('/api/') && !req.url?.startsWith('/api/auth/')) {
-        await handleApiRequest(req, res);
-      } else {
-        nextHandler(req, res);
-      }
-    } catch (err) {
-      logger.error('Unhandled server error', { error: (err as Error).message });
-      if (!res.headersSent) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: { status: 500, message: 'Internal server error' } }));
-      }
-    }
+  const child = spawn(process.execPath, [path.join(packageRoot, 'node_modules/.bin/next'), 'start', '--port', port], {
+    cwd: packageRoot,
+    stdio: 'inherit',
+    env: { ...process.env, PORT: port },
   });
 
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-  server.listen(port, () => {
-    console.log(`\ndrop.js server running at http://localhost:${port}`);
-    console.log(`  API:   http://localhost:${port}/api`);
-    console.log(`  Admin: http://localhost:${port}\n`);
+  child.on('error', (err) => {
+    console.error('Failed to start Next.js production server:', err);
+    process.exit(1);
   });
 
-  const shutdown = async () => {
-    console.log('\nShutting down...');
-    stopQueueProcessor();
-    stopCron();
-    server.close();
-    await destroyConnection();
-    process.exit(0);
-  };
+  child.on('exit', (code) => {
+    process.exit(code ?? 0);
+  });
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', () => {
+    child.kill('SIGINT');
+  });
+  process.on('SIGTERM', () => {
+    child.kill('SIGTERM');
+  });
 }
 
 // Auto-invoke when run directly

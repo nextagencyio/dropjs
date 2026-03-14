@@ -157,12 +157,9 @@ export async function ensureDbConnection(): Promise<void> {
 
   const dbConfig = await resolveDbConfig();
 
-  // Ensure data directory exists for SQLite
+  // Ensure data directory exists for SQLite (do NOT clean — that's seed/init's job)
   if (dbConfig.client === 'sqlite3' && dbConfig.connection?.filename) {
     const dir = path.dirname(dbConfig.connection.filename);
-    if (process.env.DROP_CLEAN_DB === '1' && fs.existsSync(dir)) {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -174,13 +171,9 @@ export async function ensureDbConnection(): Promise<void> {
 async function doInit(): Promise<void> {
   const dbConfig = await resolveDbConfig();
 
-  // Ensure data directory exists for SQLite
+  // Ensure data directory exists for SQLite (cleaning is handled by seed command)
   if (dbConfig.client === 'sqlite3' && dbConfig.connection?.filename) {
     const dir = path.dirname(dbConfig.connection.filename);
-    // Clean DB before server starts (for E2E testing)
-    if (process.env.DROP_CLEAN_DB === '1' && fs.existsSync(dir)) {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }

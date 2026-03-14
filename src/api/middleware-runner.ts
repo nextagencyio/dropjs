@@ -48,5 +48,11 @@ function runSingle(
     } catch (err) {
       reject(err);
     }
+
+    // Middleware may send a response (e.g. 403 CSRF) without calling next().
+    // With a real HTTP server this was fine — the response went to the socket.
+    // With the Next.js catch-all route adapter, handleApiRequest must complete
+    // so the collected response can be returned. Resolve immediately if sent.
+    if (res.isSent) resolve();
   });
 }

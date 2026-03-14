@@ -78,6 +78,12 @@ function parseCookies(header: string | undefined): Record<string, string> {
 // ---------------------------------------------------------------------------
 
 function readBody(req: IncomingMessage): Promise<Buffer> {
+  // Support pre-buffered body (used by Next.js catch-all route handler)
+  const preBuffered = (req as any).__body as Buffer | undefined;
+  if (preBuffered !== undefined) {
+    return Promise.resolve(preBuffered);
+  }
+
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     req.on('data', (chunk: Buffer) => chunks.push(chunk));

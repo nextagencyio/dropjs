@@ -16,7 +16,7 @@ export default defineConfig({
     command: 'npx tsx src/cli/commands/dev.ts',
     url: 'http://localhost:3000/api/entity-types',
     reuseExistingServer: !process.env.CI,
-    timeout: 30000,
+    timeout: 60000,
     stdout: 'pipe',
     stderr: 'pipe',
     env: {

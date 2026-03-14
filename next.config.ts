@@ -13,57 +13,9 @@ const nextConfig: NextConfig = {
       '.mjs': ['.mts', '.mjs'],
     };
 
-    if (isServer && dev && !process.env.VERCEL) {
-      // In local dev (tsx), externalize our core server modules so they're
-      // resolved at runtime via Node.js require(). This ensures that Next.js
-      // server components share the same module instances (and singletons like
-      // DB connections, entity registries, session secrets) as the API handler.
-      //
-      // On Vercel there is no tsx loader, so we let webpack bundle everything.
-      // The globalThis.__dropjs_* singletons ensure state is still shared.
-      const coreDirs = ['api', 'core', 'auth', 'db', 'field'].map(
-        (d) => path.resolve(__dirname, 'src', d)
-      );
-
-      const origExternals = config.externals;
-      config.externals = [
-        ...(Array.isArray(origExternals) ? origExternals : []),
-        ({ request, context }: { request?: string; context?: string }, callback: Function) => {
-          if (!request || !context) return callback();
-
-          // Only externalize relative imports that resolve to our core dirs
-          if (request.startsWith('.')) {
-            try {
-              const resolved = path.resolve(context, request);
-              if (coreDirs.some((dir) => resolved.startsWith(dir))) {
-                // Resolve to the actual .ts file path so Node.js module cache
-                // keys match between init-time imports (with .js extension via tsx)
-                // and runtime require() from webpack externals.
-                let resolvedPath = resolved;
-                if (!path.extname(resolved)) {
-                  for (const ext of ['.ts', '.tsx', '.js']) {
-                    if (fs.existsSync(resolved + ext)) {
-                      resolvedPath = resolved + ext;
-                      break;
-                    }
-                  }
-                } else if (path.extname(resolved) === '.js') {
-                  // Resolve .js imports to .ts source files (ESM-style imports)
-                  const tsPath = resolved.replace(/\.js$/, '.ts');
-                  if (fs.existsSync(tsPath)) {
-                    resolvedPath = tsPath;
-                  }
-                }
-                return callback(null, 'commonjs ' + resolvedPath);
-              }
-            } catch {
-              // ignore resolution errors
-            }
-          }
-          callback();
-        },
-      ];
-    }
+    // No custom externals needed — all server code is bundled by webpack.
+    // globalThis.__dropjs_* singletons ensure state is shared across
+    // webpack module boundaries (server components, API routes, server actions).
 
     return config;
   },

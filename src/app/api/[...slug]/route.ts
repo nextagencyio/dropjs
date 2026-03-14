@@ -1,30 +1,28 @@
 /**
  * Catch-all Next.js Route Handler for /api/* requests.
  *
- * Bridges the Web API Request/Response to the existing Node.js
- * handleApiRequest() dispatcher. Used on Vercel where the custom
- * HTTP server is not available.
+ * Bridges the Web API Request/Response to the Node.js
+ * handleApiRequest() dispatcher. All API traffic flows through
+ * this route — there is no separate custom HTTP server.
  */
 
-import { Readable } from 'node:stream';
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { Socket } from 'node:net';
 import { handleApiRequest } from '@/api/request-handler.js';
 
-/** Convert a Web API Request into a Node.js IncomingMessage. */
+/** Convert a Web API Request into a Node.js IncomingMessage-like object. */
 function toIncomingMessage(request: Request, slug: string[], bodyBuffer: Buffer): IncomingMessage {
   const url = new URL(request.url);
-  const path = '/api/' + slug.join('/') + url.search;
+  const apiPath = '/api/' + slug.join('/') + url.search;
+  const headers = Object.fromEntries(request.headers.entries());
 
-  // Create a readable stream from the pre-read body buffer
-  const bodyStream = Readable.from(bodyBuffer.length > 0 ? [bodyBuffer] : []);
-
-  // Attach IncomingMessage-like properties
-  const msg = Object.assign(bodyStream, {
+  // Minimal object with the properties AdaptedRequest reads.
+  // The __body property is used by readBody() to skip stream-based reading.
+  const msg = {
     method: request.method,
-    url: path,
-    headers: Object.fromEntries(request.headers.entries()),
-    socket: { remoteAddress: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1' } as any,
+    url: apiPath,
+    headers,
+    socket: { remoteAddress: headers['x-forwarded-for']?.split(',')[0]?.trim() || '127.0.0.1' },
     httpVersion: '1.1',
     httpVersionMajor: 1,
     httpVersionMinor: 1,
@@ -34,47 +32,48 @@ function toIncomingMessage(request: Request, slug: string[], bodyBuffer: Buffer)
     rawHeaders: [] as string[],
     trailers: {} as Record<string, string>,
     rawTrailers: [] as string[],
-    statusCode: undefined,
-    statusMessage: undefined,
-  }) as unknown as IncomingMessage;
+    __body: bodyBuffer,
+  };
 
-  return msg;
+  return msg as unknown as IncomingMessage;
 }
 
 /** Collect a ServerResponse into a Web API Response. */
 function collectResponse(): { res: ServerResponse; promise: Promise<Response> } {
+  // Create a minimal ServerResponse that collects output in memory
+  // instead of writing to a real socket.
   const socket = new Socket();
   const res = new ServerResponse({} as any);
-  // Prevent actual socket writes
-  (res as any).socket = socket;
-  (res as any).connection = socket;
 
   const chunks: Buffer[] = [];
   let statusCode = 200;
-  let headersWritten: Record<string, string | string[]> = {};
+  const collectedHeaders: Record<string, string | string[]> = {};
 
-  // Intercept writeHead
-  const origWriteHead = res.writeHead.bind(res);
+  // Intercept writeHead — capture status + headers without writing to socket
   (res as any).writeHead = (code: number, headersOrReason?: any, maybeHeaders?: any) => {
     statusCode = code;
     const hdrs = maybeHeaders || (typeof headersOrReason === 'object' ? headersOrReason : undefined);
     if (hdrs) {
-      headersWritten = { ...headersWritten, ...hdrs };
+      for (const [k, v] of Object.entries(hdrs)) {
+        collectedHeaders[k] = v as string | string[];
+      }
     }
-    return origWriteHead(code, headersOrReason, maybeHeaders);
+    return res;
   };
 
   // Intercept write/end to collect body
-  (res as any).write = (chunk: any) => {
+  (res as any).write = (chunk: any, _encoding?: any, cb?: any) => {
     if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    if (typeof cb === 'function') cb();
     return true;
   };
 
   const promise = new Promise<Response>((resolve) => {
-    (res as any).end = (chunk?: any) => {
+    (res as any).end = (chunk?: any, _encoding?: any, cb?: any) => {
+      if (typeof chunk === 'function') { cb = chunk; chunk = undefined; }
       if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
 
-      // Collect all headers
+      // Collect headers from both setHeader() calls and writeHead() overrides
       const responseHeaders = new Headers();
       for (const name of res.getHeaderNames()) {
         const val = res.getHeader(name);
@@ -85,7 +84,7 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
           responseHeaders.set(name, String(val));
         }
       }
-      for (const [name, val] of Object.entries(headersWritten)) {
+      for (const [name, val] of Object.entries(collectedHeaders)) {
         if (Array.isArray(val)) {
           for (const v of val) responseHeaders.append(name, v);
         } else {
@@ -95,10 +94,11 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
 
       const body = chunks.length > 0 ? Buffer.concat(chunks) : null;
       resolve(new Response(body, { status: statusCode, headers: responseHeaders }));
+      if (typeof cb === 'function') cb();
     };
   });
 
-  // Intercept pipe for sendFile
+  // Intercept socket writes for pipe/sendFile support
   socket.writable = true;
   (socket as any).write = (chunk: any) => {
     if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
@@ -107,6 +107,8 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
   (socket as any).end = (chunk?: any) => {
     if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   };
+  (res as any).socket = socket;
+  (res as any).connection = socket;
 
   return { res, promise };
 }

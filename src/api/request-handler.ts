@@ -1,7 +1,7 @@
 /**
  * Core API request dispatcher for /api/* requests.
  *
- * Called from http.createServer in dev.ts/serve.ts.
+ * Called from the Next.js catch-all route at src/app/api/[...slug]/route.ts.
  * Creates adapted req/res, runs middleware chain, matches route, calls handler.
  */
 

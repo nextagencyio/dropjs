@@ -7,6 +7,7 @@ import { migrateDrupalAnalyze, migrateDrupalSchema, migrateDrupalRun } from '../
 import { startDev } from '../cli/commands/dev.js';
 import { build } from '../cli/commands/build.js';
 import { serve } from '../cli/commands/serve.js';
+import { seed } from '../cli/commands/seed.js';
 import { dbExport, dbImport } from '../cli/commands/db.js';
 import { entityList } from '../cli/commands/entity-list.js';
 import { userCreate } from '../cli/commands/user-create.js';
@@ -42,9 +43,16 @@ program
 
 program
   .command('serve')
-  .description('Start the production server (serves pre-built admin, no Vite)')
+  .description('Start the production server (serves pre-built admin)')
   .action(async () => {
     await serve();
+  });
+
+program
+  .command('seed')
+  .description('Seed default admin user and sample content')
+  .action(async () => {
+    await seed();
   });
 
 const migrate = program

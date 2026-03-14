@@ -17,7 +17,7 @@ npm run typecheck    # Type check server code only
 
 ## Architecture
 
-**Custom HTTP server** (not Express) in `src/cli/commands/dev.ts`. Routes `/api/*` to the API handler, everything else to Next.js.
+**Next.js is the only server.** `dev.ts` seeds the DB then spawns `next dev`; `serve.ts` spawns `next start`. All `/api/*` traffic goes through the catch-all route at `src/app/api/[...slug]/route.ts`, which bridges Web API Request/Response to the Node.js `handleApiRequest()` dispatcher.
 
 ```
 src/api/          REST API, request handling, middleware, OpenAPI, GraphQL
@@ -43,7 +43,9 @@ src/migrate/      Drupal migration tools
 - `src/field/field-storage.ts` — Field table management, serialization
 - `src/auth/user.ts` — User CRUD, password hashing
 - `src/auth/access.ts` — Permission checks
-- `src/cli/commands/dev.ts` — Dev server entry point
+- `src/cli/commands/dev.ts` — Seeds DB, spawns `next dev`
+- `src/cli/commands/seed.ts` — Seed default admin user + sample content
+- `src/app/api/[...slug]/route.ts` — Catch-all API route (bridges to handleApiRequest)
 - `src/bin/drop.ts` — CLI binary (commander)
 
 ### Key Patterns
@@ -67,7 +69,7 @@ src/migrate/      Drupal migration tools
 
 - Default site name is `drop.js` (lowercase)
 - Image fields auto-add `url`, `thumbnail_url`, `medium_url`, `large_url` on deserialize
-- Legacy Express server at `src/api/server.ts` is dead code — not used
+- No custom HTTP server — Next.js handles everything (dev and production)
 - `Entity.load(entityType, id)` works without specifying bundle
 - All public pages are server-rendered (Next.js server components) for SEO
 - `basePath` is NOT set — all routes at root (e.g., `/node/1/edit`, `/login`)

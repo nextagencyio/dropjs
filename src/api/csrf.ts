@@ -18,6 +18,7 @@ export function csrfTokenHandler(req: Request, res: Response): void {
     httpOnly: false, // JS needs to read it
     sameSite: 'strict',
     path: '/',
+    secure: process.env.NODE_ENV === 'production',
   });
   res.json({ csrfToken: token });
 }
@@ -62,7 +63,17 @@ export function csrfProtection(): RequestHandler {
       return;
     }
 
-    if (headerToken !== cookieToken) {
+    // Use timing-safe comparison to prevent timing attacks
+    try {
+      const headerBuf = Buffer.from(headerToken, 'hex');
+      const cookieBuf = Buffer.from(cookieToken, 'hex');
+      if (headerBuf.length !== cookieBuf.length || !crypto.timingSafeEqual(headerBuf, cookieBuf)) {
+        res.status(403).json({
+          error: { status: 403, message: 'CSRF token mismatch' },
+        });
+        return;
+      }
+    } catch {
       res.status(403).json({
         error: { status: 403, message: 'CSRF token mismatch' },
       });

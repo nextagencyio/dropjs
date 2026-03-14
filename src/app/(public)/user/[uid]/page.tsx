@@ -1,13 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-server';
-
-interface UserProfile {
-  uid: number;
-  name: string;
-  created: string;
-  roles: string[];
-}
+import { getUserProfile, listEntities } from '@/lib/server/data';
 
 interface NodeTeaser {
   nid: number;
@@ -19,11 +12,6 @@ interface NodeTeaser {
   field_body?: { value: string; format?: string; summary?: string };
   field_image?: { url?: string; alt?: string; medium_url?: string; thumbnail_url?: string } | null;
   field_tags?: Array<{ target_id: number; name?: string }>;
-}
-
-interface ApiResponse {
-  data: NodeTeaser[];
-  meta?: { total: number };
 }
 
 function stripHtml(html: string): string {
@@ -56,8 +44,7 @@ function getTeaser(node: NodeTeaser): string {
 
 export async function generateMetadata({ params }: { params: Promise<{ uid: string }> }): Promise<Metadata> {
   const { uid } = await params;
-  const res = await apiFetch<{ data: UserProfile }>(`/api/users/${uid}/profile`);
-  const user = res?.data;
+  const user = await getUserProfile(parseInt(uid, 10));
 
   if (!user) {
     return { title: 'User not found' };
@@ -126,8 +113,7 @@ function NodeCard({ node }: { node: NodeTeaser }) {
 
 export default async function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
   const { uid } = await params;
-  const res = await apiFetch<{ data: UserProfile }>(`/api/users/${uid}/profile`);
-  const user = res?.data;
+  const user = await getUserProfile(parseInt(uid, 10));
 
   if (!user) {
     return (
@@ -141,10 +127,12 @@ export default async function UserProfilePage({ params }: { params: Promise<{ ui
     );
   }
 
-  const articlesRes = await apiFetch<ApiResponse>(
-    `/api/node/article?filter[uid]=${user.uid}&filter[status]=1&sort=-created&page[limit]=10`
-  );
-  const nodes = articlesRes?.data || [];
+  const result = await listEntities('node', 'article', {
+    filters: { uid: String(user.uid), status: '1' },
+    sort: '-created',
+    limit: 10,
+  });
+  const nodes = result.data as unknown as NodeTeaser[];
 
   return (
     <div>

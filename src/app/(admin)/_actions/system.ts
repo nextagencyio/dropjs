@@ -839,3 +839,93 @@ export async function deleteParagraphType(id: string): Promise<ActionResult> {
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Shortcuts ────────────────────────────────────────────────────────
+
+export async function createShortcutAction(data: {
+  title: string;
+  path: string;
+  weight?: number;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const user = await getSessionUser();
+  if (!user) return { success: false, error: 'Authentication required' };
+
+  try {
+    const { addShortcut } = await import('../../../core/shortcuts');
+    const shortcut = await addShortcut(user.uid!, data.title, data.path, data.weight ?? 0);
+    revalidatePath('/config/shortcuts');
+    return { success: true, data: shortcut };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updateShortcutAction(id: number, data: {
+  title?: string;
+  path?: string;
+  weight?: number;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const user = await getSessionUser();
+  if (!user) return { success: false, error: 'Authentication required' };
+
+  try {
+    const { updateShortcut: coreUpdate } = await import('../../../core/shortcuts');
+    await coreUpdate(id, data);
+    revalidatePath('/config/shortcuts');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function deleteShortcutAction(id: number): Promise<ActionResult> {
+  await ensureInitialized();
+  const user = await getSessionUser();
+  if (!user) return { success: false, error: 'Authentication required' };
+
+  try {
+    const { deleteShortcut: coreDelete } = await import('../../../core/shortcuts');
+    await coreDelete(id);
+    revalidatePath('/config/shortcuts');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function loadShortcutsAction(): Promise<ActionResult> {
+  await ensureInitialized();
+  const user = await getSessionUser();
+  if (!user) return { success: false, error: 'Authentication required' };
+
+  try {
+    const { listShortcuts } = await import('../../../core/shortcuts');
+    const shortcuts = await listShortcuts(user.uid!);
+    return { success: true, data: shortcuts };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── Media List (server action for client-side pagination) ───────────
+
+export async function loadMediaListAction(params?: {
+  mimetype?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('access media overview');
+  if (!auth.success) return auth;
+
+  try {
+    const { getMediaList } = await import('../../../lib/server/data');
+    const result = await getMediaList(params);
+    return { success: true, data: result };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

@@ -963,5 +963,108 @@ export async function getThemes(): Promise<{ themes: ThemeInfo[]; config: ThemeC
   return { themes, config };
 }
 
+// ── Public Page Helpers ─────────────────────────────────────────────
+
+export interface PublishedNode {
+  nid: number;
+  type: string;
+  title: string;
+  status: number;
+  uid: number;
+  created: number;
+  changed: number;
+  promote: number;
+  sticky: number;
+  field_body?: { value: string; format?: string; summary?: string };
+  field_image?: { url?: string; alt?: string; medium_url?: string; thumbnail_url?: string } | null;
+  field_tags?: Array<{ target_id: number; name?: string }>;
+}
+
+export async function getPublishedNodes(params: {
+  bundles: string[];
+  promote?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<{ data: PublishedNode[]; total: number }> {
+  await ensureInitialized();
+
+  const allData: EntityData[] = [];
+  let total = 0;
+
+  for (const bundle of params.bundles) {
+    const filters: Record<string, string> = { status: '1' };
+    if (params.promote) filters.promote = '1';
+
+    const result = await listEntities('node', bundle, {
+      filters,
+      sort: '-created',
+      limit: params.limit ?? 1000,
+      offset: params.offset ?? 0,
+    });
+    allData.push(...result.data);
+    total += result.meta.total;
+  }
+
+  return { data: allData as unknown as PublishedNode[], total };
+}
+
+export interface TaxonomyTermSummary {
+  tid: number;
+  name: string;
+}
+
+export async function getTaxonomyTerms(vocabulary: string): Promise<TaxonomyTermSummary[]> {
+  await ensureInitialized();
+
+  const rows = await db
+    .select('taxonomy_term_field_data', 'tfd')
+    .fields('tfd', ['tid', 'name'])
+    .condition('tfd.type', vocabulary)
+    .condition('tfd.langcode', 'en')
+    .execute<{ tid: number; name: string }>();
+
+  return rows;
+}
+
+export async function getUserProfile(uid: number): Promise<{ uid: number; name: string; created: string; roles: string[] } | null> {
+  await ensureInitialized();
+  const user = await loadUser(uid);
+  if (!user || user.status === false) return null;
+  return {
+    uid: user.uid!,
+    name: user.name,
+    created: user.created ?? new Date().toISOString(),
+    roles: user.roles ?? [],
+  };
+}
+
+export async function getNodesByTag(tid: number, limit: number = 200): Promise<EntityData[]> {
+  await ensureInitialized();
+  const conn = (await import('../../db/index')).getConnection();
+
+  const rows = await conn('taxonomy_index')
+    .select('nid')
+    .where('tid', tid)
+    .orderBy('nid', 'desc')
+    .limit(limit);
+
+  const results: EntityData[] = [];
+  for (const row of rows as { nid: number }[]) {
+    const entity = await Entity.load('node', row.nid);
+    if (entity) {
+      const data = entity.toJSON();
+      if (data.status === 1) results.push(data);
+    }
+  }
+
+  return results;
+}
+
+export async function getMainMenu(): Promise<{ tree: MenuTreeItemData[]; items: MenuItemData[] } | null> {
+  const detail = await getMenuDetail('main');
+  if (!detail) return null;
+  return { tree: detail.tree, items: detail.items };
+}
+
 // Re-export types for convenience
 export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig };

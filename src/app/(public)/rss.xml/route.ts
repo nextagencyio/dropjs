@@ -1,19 +1,6 @@
-const API_BASE = `http://localhost:${process.env.PORT || 3000}`;
+import { getSiteConfig, getPublishedNodes } from '@/lib/server/data';
 
-interface SiteConfig {
-  name: string;
-  slogan: string;
-  mail: string;
-}
-
-interface NodeItem {
-  nid: number;
-  type: string;
-  title: string;
-  created: number;
-  changed: number;
-  field_body?: { value: string; summary?: string };
-}
+export const revalidate = 300;
 
 function escapeXml(str: string): string {
   return str
@@ -31,27 +18,12 @@ function stripHtml(html: string): string {
 export async function GET(request: Request) {
   const origin = new URL(request.url).origin;
 
-  let siteName = 'drop.js';
-  let siteDescription = '';
-  try {
-    const configRes = await fetch(`${API_BASE}/api/config/site`, { cache: 'no-store' });
-    if (configRes.ok) {
-      const data = await configRes.json();
-      siteName = data.data?.name || siteName;
-      siteDescription = data.data?.slogan || '';
-    }
-  } catch { /* use defaults */ }
+  const config = await getSiteConfig();
+  const siteName = config?.name || 'drop.js';
+  const siteDescription = config?.slogan || '';
 
-  let items: NodeItem[] = [];
-  try {
-    const [articles, pages] = await Promise.all([
-      fetch(`${API_BASE}/api/node/article?filter[status]=1&sort=-created&page[limit]=25`, { cache: 'no-store' }).then(r => r.json()),
-      fetch(`${API_BASE}/api/node/page?filter[status]=1&sort=-created&page[limit]=25`, { cache: 'no-store' }).then(r => r.json()),
-    ]);
-    items = [...(articles.data || []), ...(pages.data || [])];
-    items.sort((a, b) => b.created - a.created);
-    items = items.slice(0, 25);
-  } catch { /* empty feed */ }
+  const result = await getPublishedNodes({ bundles: ['article', 'page'], limit: 25 });
+  const items = [...result.data].sort((a, b) => b.created - a.created).slice(0, 25);
 
   const rssItems = items.map((node) => {
     const link = `${origin}/node/${node.nid}`;

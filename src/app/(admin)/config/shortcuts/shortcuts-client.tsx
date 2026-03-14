@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { apiFetch } from '@/lib/api-client';
+import {
+  createShortcutAction,
+  updateShortcutAction,
+  deleteShortcutAction,
+  loadShortcutsAction,
+} from '@/app/(admin)/_actions/system';
 
 interface Shortcut {
   id: number;
@@ -33,9 +38,10 @@ export default function ShortcutsClient({ initialShortcuts }: ShortcutsClientPro
   const [editPath, setEditPath] = useState('');
 
   const loadShortcuts = () => {
-    apiFetch<{ data: Shortcut[] }>('/shortcuts')
+    loadShortcutsAction()
       .then((res) => {
-        const sorted = [...res.data].sort((a, b) => a.weight - b.weight);
+        if (!res.success) throw new Error(res.error);
+        const sorted = [...(res.data as Shortcut[])].sort((a, b) => a.weight - b.weight);
         setShortcuts(sorted);
       })
       .catch((err) => {
@@ -48,14 +54,12 @@ export default function ShortcutsClient({ initialShortcuts }: ShortcutsClientPro
     setError('');
     setSuccess('');
     try {
-      await apiFetch('/shortcuts', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: newTitle,
-          path: newPath,
-          weight: shortcuts.length,
-        }),
+      const result = await createShortcutAction({
+        title: newTitle,
+        path: newPath,
+        weight: shortcuts.length,
       });
+      if (!result.success) throw new Error(result.error);
       setShowAdd(false);
       setNewTitle('');
       setNewPath('');
@@ -78,13 +82,11 @@ export default function ShortcutsClient({ initialShortcuts }: ShortcutsClientPro
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/shortcuts/${editingId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          title: editTitle,
-          path: editPath,
-        }),
+      const result = await updateShortcutAction(editingId, {
+        title: editTitle,
+        path: editPath,
       });
+      if (!result.success) throw new Error(result.error);
       setEditingId(null);
       setSuccess('Shortcut updated.');
       loadShortcuts();
@@ -99,7 +101,8 @@ export default function ShortcutsClient({ initialShortcuts }: ShortcutsClientPro
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/shortcuts/${shortcutId}`, { method: 'DELETE' });
+      const result = await deleteShortcutAction(shortcutId);
+      if (!result.success) throw new Error(result.error);
       setSuccess('Shortcut deleted.');
       loadShortcuts();
       router.refresh();
@@ -116,14 +119,8 @@ export default function ShortcutsClient({ initialShortcuts }: ShortcutsClientPro
     const above = items[index - 1];
     try {
       await Promise.all([
-        apiFetch(`/shortcuts/${current.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ weight: above.weight }),
-        }),
-        apiFetch(`/shortcuts/${above.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ weight: current.weight }),
-        }),
+        updateShortcutAction(current.id, { weight: above.weight }),
+        updateShortcutAction(above.id, { weight: current.weight }),
       ]);
       loadShortcuts();
     } catch (err) {
@@ -139,14 +136,8 @@ export default function ShortcutsClient({ initialShortcuts }: ShortcutsClientPro
     const below = items[index + 1];
     try {
       await Promise.all([
-        apiFetch(`/shortcuts/${current.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ weight: below.weight }),
-        }),
-        apiFetch(`/shortcuts/${below.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ weight: current.weight }),
-        }),
+        updateShortcutAction(current.id, { weight: below.weight }),
+        updateShortcutAction(below.id, { weight: current.weight }),
       ]);
       loadShortcuts();
     } catch (err) {

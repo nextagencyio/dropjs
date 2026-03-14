@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-server';
+import { loadEntity, getUserProfile } from '@/lib/server/data';
 import { CommentsSection } from './comments-client';
 import { EditLink } from './edit-link';
 
@@ -19,19 +19,14 @@ interface NodeFull {
   [key: string]: unknown;
 }
 
-interface UserProfile {
-  uid: number;
-  name: string;
-}
-
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const res = await apiFetch<{ data: NodeFull }>(`/api/entity/node/${id}`);
-  const node = res?.data;
+  const data = await loadEntity('node', parseInt(id, 10));
+  const node = data as unknown as NodeFull | null;
 
   if (!node) {
     return { title: 'Page not found' };
@@ -67,8 +62,8 @@ function formatDate(timestamp: number): string {
 
 export default async function NodeViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const res = await apiFetch<{ data: NodeFull }>(`/api/entity/node/${id}`);
-  const node = res?.data;
+  const data = await loadEntity('node', parseInt(id, 10));
+  const node = data as unknown as NodeFull | null;
 
   if (!node) {
     return (
@@ -82,8 +77,7 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const userRes = node.uid ? await apiFetch<{ data: UserProfile }>(`/api/users/${node.uid}/profile`) : null;
-  const author = userRes?.data;
+  const author = node.uid ? await getUserProfile(node.uid) : null;
   const imageUrl = node.field_image?.large_url || node.field_image?.url;
 
   return (

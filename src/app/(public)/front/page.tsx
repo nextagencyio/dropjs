@@ -1,36 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-server';
+import { getSiteConfig, getPublishedNodes, type PublishedNode } from '@/lib/server/data';
 import Pager from '@/components/pager';
 
-interface NodeTeaser {
-  nid: number;
-  type: string;
-  title: string;
-  status: number;
-  uid: number;
-  created: number;
-  promote: number;
-  sticky: number;
-  field_body?: { value: string; format?: string; summary?: string };
-  field_image?: { url?: string; alt?: string; medium_url?: string; thumbnail_url?: string } | null;
-  field_tags?: Array<{ target_id: number; name?: string }>;
-}
-
-interface ApiResponse {
-  data: NodeTeaser[];
-  meta?: { total: number };
-}
-
-interface SiteConfig {
-  name: string;
-  slogan: string;
-}
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const configRes = await apiFetch<{ data: SiteConfig }>('/api/config/site');
-  const siteName = configRes?.data?.name || 'drop.js';
-  const slogan = configRes?.data?.slogan || '';
+  const config = await getSiteConfig();
+  const siteName = config?.name || 'drop.js';
+  const slogan = config?.slogan || '';
 
   return {
     title: slogan ? `${siteName} — ${slogan}` : siteName,
@@ -50,7 +28,7 @@ function formatDate(timestamp: number): string {
   });
 }
 
-function getTeaser(node: NodeTeaser): string {
+function getTeaser(node: PublishedNode): string {
   const body = node.field_body;
   if (!body) return '';
   if (body.summary) return stripHtml(body.summary);
@@ -58,7 +36,7 @@ function getTeaser(node: NodeTeaser): string {
   return plain.length > 300 ? plain.slice(0, 300) + '...' : plain;
 }
 
-function NodeCard({ node }: { node: NodeTeaser }) {
+function NodeCard({ node }: { node: PublishedNode }) {
   const hasImage = node.field_image?.url || node.field_image?.medium_url;
 
   return (
@@ -121,15 +99,13 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   const [articles, pages] = await Promise.all([
-    apiFetch<ApiResponse>(`/api/node/article?filter[status]=1&filter[promote]=1&sort=-sticky,-created&page[limit]=${ITEMS_PER_PAGE}&page[offset]=${offset}`),
-    apiFetch<ApiResponse>(`/api/node/page?filter[status]=1&filter[promote]=1&sort=-sticky,-created&page[limit]=${ITEMS_PER_PAGE}&page[offset]=${offset}`),
+    getPublishedNodes({ bundles: ['article'], promote: true, limit: ITEMS_PER_PAGE, offset }),
+    getPublishedNodes({ bundles: ['page'], promote: true, limit: ITEMS_PER_PAGE, offset }),
   ]);
 
-  const totalArticles = articles?.meta?.total || 0;
-  const totalPages = pages?.meta?.total || 0;
-  const totalItems = totalArticles + totalPages;
+  const totalItems = articles.total + pages.total;
 
-  const nodes = [...(articles?.data || []), ...(pages?.data || [])];
+  const nodes = [...articles.data, ...pages.data];
   nodes.sort((a, b) => {
     if (a.sticky !== b.sticky) return b.sticky - a.sticky;
     return b.created - a.created;

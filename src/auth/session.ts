@@ -22,6 +22,9 @@ function getSessionSecret(): string {
     g.__dropjs_session_secret = envSecret;
     return envSecret;
   }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('SESSION_SECRET must be set in production. Sessions will not work without it.');
+  }
   console.warn(
     '[dropjs] WARNING: SESSION_SECRET is not set. Using a random secret — sessions will not survive restarts. Set SESSION_SECRET in .env for production.'
   );

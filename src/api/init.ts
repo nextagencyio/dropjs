@@ -96,6 +96,11 @@ async function doInit(): Promise<void> {
   const dataDir = process.env.DROP_DATA_DIR || './data';
   const dbFilename = path.resolve(path.join(dataDir, 'drop.db'));
 
+  // Reject SQLite on Vercel — require PostgreSQL
+  if (process.env.VERCEL && !process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required on Vercel. SQLite cannot be used on serverless.');
+  }
+
   let dbConfig: any = {
     client: 'sqlite3',
     connection: { filename: dbFilename },

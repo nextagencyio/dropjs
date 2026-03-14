@@ -1,27 +1,10 @@
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-server';
+import { getSiteConfig, getMainMenu, type MenuItemData } from '@/lib/server/data';
 import { PublicNav, UserLinks } from './nav-client';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
-interface SiteConfig {
-  name: string;
-  slogan: string;
-  mail: string;
-  front_page: string;
-}
-
-interface MenuItem {
-  id: string;
-  title: string;
-  url: string;
-  weight: number;
-  parent: string | null;
-  enabled: boolean;
-  children?: MenuItem[];
-}
-
-function buildNavLinks(menuItems: MenuItem[]): { href: string; label: string }[] {
+function buildNavLinks(menuItems: MenuItemData[]): { href: string; label: string }[] {
   const links: { href: string; label: string }[] = [
     { href: '/front', label: 'Home' },
   ];
@@ -40,11 +23,12 @@ function buildNavLinks(menuItems: MenuItem[]): { href: string; label: string }[]
 }
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
-  const configRes = await apiFetch<{ data: SiteConfig }>('/api/config/site');
-  const menuRes = await apiFetch<{ data: { tree?: MenuItem[]; items?: MenuItem[] } }>('/api/menus/main');
+  const [config, menuData] = await Promise.all([
+    getSiteConfig(),
+    getMainMenu(),
+  ]);
 
-  const config = configRes?.data || null;
-  const menuItems = menuRes?.data?.tree || menuRes?.data?.items || [];
+  const menuItems = menuData?.tree || menuData?.items || [];
   const navLinks = buildNavLinks(menuItems);
   const siteName = config?.name || 'drop.js';
 

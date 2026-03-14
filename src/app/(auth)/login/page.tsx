@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { CircleAlert, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -37,7 +38,7 @@ export default function LoginPage() {
       <div className="bg-gin-bg-layer rounded-gin-l p-10 border border-gin-border/60 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
         <div className="text-center mb-9">
           <div className="inline-flex items-center justify-center mb-5">
-            <img src="/logo.png" alt="drop.js" width={72} height={99} className="drop-shadow-sm" />
+            <Image src="/logo.png" alt="drop.js" width={72} height={99} className="drop-shadow-sm" priority />
           </div>
           <h1 className="text-[26px] font-bold text-gin-title tracking-tight leading-tight">drop.js</h1>
           <p className="text-sm mt-2 text-gin-text-light font-medium">Log in to your account</p>

@@ -1,24 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-server';
+import { loadEntity, getNodesByTag, type EntityData } from '@/lib/server/data';
 import Pager from '@/components/pager';
-
-interface TaxonomyTerm {
-  tid: number;
-  vid: string;
-  name: string;
-  status: number;
-  weight: number;
-}
-
-interface NodeTeaser {
-  nid: number;
-  type: string;
-  title: string;
-  created: number;
-  status: number;
-  field_body?: { value: string; summary?: string };
-}
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
@@ -34,10 +17,9 @@ function formatDate(timestamp: number): string {
 
 export async function generateMetadata({ params }: { params: Promise<{ tid: string }> }): Promise<Metadata> {
   const { tid } = await params;
-  const res = await apiFetch<{ data: TaxonomyTerm }>(`/api/entity/taxonomy_term/${tid}`);
-  const term = res?.data;
+  const term = await loadEntity('taxonomy_term', parseInt(tid, 10));
   if (!term) return { title: 'Term not found' };
-  return { title: term.name };
+  return { title: (term as any).name ?? (term as any).title ?? 'Term' };
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -47,8 +29,7 @@ export default async function TaxonomyTermPage({ params, searchParams }: { param
   const { page: pageParam } = await searchParams;
   const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
 
-  const termRes = await apiFetch<{ data: TaxonomyTerm }>(`/api/entity/taxonomy_term/${tid}`);
-  const term = termRes?.data;
+  const term = await loadEntity('taxonomy_term', parseInt(tid, 10));
 
   if (!term) {
     return (
@@ -62,34 +43,24 @@ export default async function TaxonomyTermPage({ params, searchParams }: { param
     );
   }
 
-  // Load content tagged with this term
-  const [articles, pages] = await Promise.all([
-    apiFetch<{ data: NodeTeaser[] }>('/api/node/article?filter[status]=1&sort=-created&page[limit]=200'),
-    apiFetch<{ data: NodeTeaser[] }>('/api/node/page?filter[status]=1&sort=-created&page[limit]=200'),
-  ]);
+  const termName = (term as any).name ?? (term as any).title ?? 'Term';
 
-  const all = [...(articles?.data || []), ...(pages?.data || [])];
-  const filteredNodes = all
-    .filter((n: any) => {
-      const tags = n.field_tags;
-      if (!Array.isArray(tags)) return false;
-      return tags.some((t: any) => String(t.target_id) === String(tid) || String(t) === String(tid));
-    })
-    .sort((a, b) => b.created - a.created);
+  const allNodes = await getNodesByTag(parseInt(tid, 10));
+  allNodes.sort((a: any, b: any) => (b.created ?? 0) - (a.created ?? 0));
 
-  const totalItems = filteredNodes.length;
+  const totalItems = allNodes.length;
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const nodes = filteredNodes.slice(offset, offset + ITEMS_PER_PAGE);
+  const nodes = allNodes.slice(offset, offset + ITEMS_PER_PAGE);
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">{term.name}</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">{termName}</h1>
 
       {nodes.length === 0 && currentPage === 1 ? (
-        <p className="text-gray-500">No content tagged with &ldquo;{term.name}&rdquo;.</p>
+        <p className="text-gray-500">No content tagged with &ldquo;{termName}&rdquo;.</p>
       ) : (
         <div>
-          {nodes.map((node) => (
+          {nodes.map((node: any) => (
             <article key={node.nid} className="border-b border-gray-200 pb-6 mb-6 last:border-0">
               <h2 className="text-xl font-semibold mb-1">
                 <Link href={`/node/${node.nid}`} className="text-gin-primary hover:underline no-underline">

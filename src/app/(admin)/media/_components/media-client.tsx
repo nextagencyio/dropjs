@@ -7,6 +7,7 @@ import {
   uploadFile,
   deleteFile,
 } from '@/app/(admin)/_actions/media';
+import { loadMediaListAction } from '@/app/(admin)/_actions/system';
 
 export interface FileData {
   fid: number;
@@ -291,16 +292,16 @@ export function MediaLibraryClient({
   const loadFiles = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', '24');
-      if (filter) params.set('mimetype', filter);
-      if (search) params.set('search', search);
-      const res = await fetch(`/api/media?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to load files');
-      const result = await res.json();
-      setFiles(result.data);
-      setMeta(result.meta);
+      const result = await loadMediaListAction({
+        page,
+        limit: 24,
+        mimetype: filter || undefined,
+        search: search || undefined,
+      });
+      if (!result.success) throw new Error(result.error);
+      const data = result.data as { data: FileData[]; meta: MediaListMeta };
+      setFiles(data.data);
+      setMeta(data.meta);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load files');
     } finally {

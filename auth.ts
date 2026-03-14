@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import authConfig from './auth.config';
-import { ensureInitialized } from './src/api/init';
+import { ensureDbConnection } from './src/api/init';
 import { authenticateUser } from './src/auth/user';
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
@@ -16,7 +16,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.name || !credentials?.password) return null;
 
-        await ensureInitialized();
+        await ensureDbConnection();
         const user = await authenticateUser(
           credentials.name as string,
           credentials.password as string,

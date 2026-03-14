@@ -90,8 +90,11 @@ export async function ensureInitialized(): Promise<void> {
   await g.__dropjs_initializing;
 }
 
-async function doInit(): Promise<void> {
-  // Load database config
+/**
+ * Resolve database config from environment / config file.
+ * Pure config — no side effects.
+ */
+async function resolveDbConfig(): Promise<any> {
   const configPath = path.resolve(process.cwd(), 'drop.config.js');
   const dataDir = process.env.DROP_DATA_DIR || './data';
   const dbFilename = path.resolve(path.join(dataDir, 'drop.db'));
@@ -140,6 +143,36 @@ async function doInit(): Promise<void> {
       },
     };
   }
+
+  return dbConfig;
+}
+
+/**
+ * Ensure the database connection exists without running full initialization.
+ * Used by auth to query users without bootstrapping the entire CMS.
+ */
+export async function ensureDbConnection(): Promise<void> {
+  const g2 = globalThis as unknown as { __dropjs_db?: unknown };
+  if (g2.__dropjs_db) return; // Already connected
+
+  const dbConfig = await resolveDbConfig();
+
+  // Ensure data directory exists for SQLite
+  if (dbConfig.client === 'sqlite3' && dbConfig.connection?.filename) {
+    const dir = path.dirname(dbConfig.connection.filename);
+    if (process.env.DROP_CLEAN_DB === '1' && fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  }
+
+  createConnection(dbConfig);
+}
+
+async function doInit(): Promise<void> {
+  const dbConfig = await resolveDbConfig();
 
   // Ensure data directory exists for SQLite
   if (dbConfig.client === 'sqlite3' && dbConfig.connection?.filename) {

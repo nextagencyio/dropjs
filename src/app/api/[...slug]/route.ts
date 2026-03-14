@@ -12,14 +12,12 @@ import { Socket } from 'node:net';
 import { handleApiRequest } from '@/api/request-handler.js';
 
 /** Convert a Web API Request into a Node.js IncomingMessage. */
-function toIncomingMessage(request: Request, slug: string[]): IncomingMessage {
+function toIncomingMessage(request: Request, slug: string[], bodyBuffer: Buffer): IncomingMessage {
   const url = new URL(request.url);
   const path = '/api/' + slug.join('/') + url.search;
 
-  // Create a readable stream from the request body
-  const bodyStream = request.body
-    ? Readable.fromWeb(request.body as any)
-    : Readable.from([]);
+  // Create a readable stream from the pre-read body buffer
+  const bodyStream = Readable.from(bodyBuffer.length > 0 ? [bodyBuffer] : []);
 
   // Attach IncomingMessage-like properties
   const msg = Object.assign(bodyStream, {
@@ -54,7 +52,6 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
   const chunks: Buffer[] = [];
   let statusCode = 200;
   let headersWritten: Record<string, string | string[]> = {};
-  let finished = false;
 
   // Intercept writeHead
   const origWriteHead = res.writeHead.bind(res);
@@ -68,22 +65,17 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
   };
 
   // Intercept write/end to collect body
-  const origWrite = res.write.bind(res);
-  (res as any).write = (chunk: any, ...args: any[]) => {
+  (res as any).write = (chunk: any) => {
     if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     return true;
   };
 
-  const origEnd = res.end.bind(res);
-
   const promise = new Promise<Response>((resolve) => {
-    (res as any).end = (chunk?: any, ...args: any[]) => {
+    (res as any).end = (chunk?: any) => {
       if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      finished = true;
 
       // Collect all headers
       const responseHeaders = new Headers();
-      // Headers set via setHeader
       for (const name of res.getHeaderNames()) {
         const val = res.getHeader(name);
         if (val === undefined) continue;
@@ -93,7 +85,6 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
           responseHeaders.set(name, String(val));
         }
       }
-      // Headers passed to writeHead
       for (const [name, val] of Object.entries(headersWritten)) {
         if (Array.isArray(val)) {
           for (const v of val) responseHeaders.append(name, v);
@@ -107,11 +98,7 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
     };
   });
 
-  // Also intercept pipe for sendFile
-  const origPipe = res.pipe;
-  // We need to handle the case where a file stream is piped to the response
-  // Override pipe is complex — instead we'll handle it via the stream events
-  // by making the socket writable
+  // Intercept pipe for sendFile
   socket.writable = true;
   (socket as any).write = (chunk: any) => {
     if (chunk) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
@@ -126,7 +113,15 @@ function collectResponse(): { res: ServerResponse; promise: Promise<Response> } 
 
 async function handler(request: Request, context: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await context.params;
-  const req = toIncomingMessage(request, slug);
+
+  // Pre-read the request body to avoid stream consumption issues in serverless
+  let bodyBuffer = Buffer.alloc(0);
+  if (request.body) {
+    const arrayBuffer = await request.arrayBuffer();
+    bodyBuffer = Buffer.from(arrayBuffer);
+  }
+
+  const req = toIncomingMessage(request, slug, bodyBuffer);
   const { res, promise } = collectResponse();
 
   await handleApiRequest(req, res);
@@ -141,7 +136,5 @@ export const PATCH = handler;
 export const DELETE = handler;
 export const OPTIONS = handler;
 
-// Allow large request bodies for file uploads
-export const config = {
-  maxDuration: 30,
-};
+// Allow long-running requests (cold start init + file uploads)
+export const maxDuration = 60;

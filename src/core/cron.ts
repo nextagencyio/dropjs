@@ -158,15 +158,6 @@ export function registerDefaultCronJobs(): void {
     }
   });
 
-  // Clean expired password reset tokens every hour
-  registerCronJob('password_reset_cleanup', 60 * 60 * 1000, async () => {
-    try {
-      const { cleanExpiredResetTokens } = await import('../auth/index.js');
-      await cleanExpiredResetTokens();
-    } catch {
-      // Auth package may not be available
-    }
-  });
 }
 
 /**

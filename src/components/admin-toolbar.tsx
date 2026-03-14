@@ -4,7 +4,12 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, FileText, Building2, Puzzle, Palette, Settings, Users, BarChart3, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
-import type { User } from '@/lib/api-auth';
+interface User {
+  uid: number;
+  name: string;
+  email: string;
+  roles?: string[];
+}
 
 interface AdminToolbarProps {
   user: User | null;

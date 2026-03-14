@@ -1,27 +1,22 @@
 import 'server-only';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { auth } from '../../../auth';
 import { ensureInitialized } from '../../api/init';
-import { validateToken } from '../../auth/session';
 import { loadUser, type UserData } from '../../auth/user';
 import { userHasPermission } from '../../auth/access';
 
 export type { UserData } from '../../auth/user';
 
 /**
- * Get the current session user from the HttpOnly cookie.
+ * Get the current session user via NextAuth.
  * Returns null if not authenticated.
  */
 export async function getSessionUser(): Promise<UserData | null> {
+  const session = await auth();
+  if (!session?.user?.uid) return null;
+
   await ensureInitialized();
-  const cookieStore = await cookies();
-  const token = cookieStore.get('dropjs_session')?.value;
-  if (!token) return null;
-
-  const session = await validateToken(token);
-  if (!session) return null;
-
-  const user = await loadUser(session.uid);
+  const user = await loadUser(session.user.uid);
   if (!user || user.status === false) return null;
   return user;
 }

@@ -11,7 +11,7 @@ export async function GET() {
     steps.push(`Init complete in ${Date.now() - start}ms`);
 
     // Use dynamic imports for server-only modules
-    const { getAllEntityTypes } = await import('@/core/entity-types');
+    const { getAllEntityTypes } = await import('../../../core/entity-type');
     const types = getAllEntityTypes();
     steps.push(`Entity types: ${types.length}`);
 

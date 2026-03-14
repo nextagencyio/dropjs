@@ -49,12 +49,3 @@ export { authenticate, requireAuth, requirePermission } from './middleware.js';
 export { checkEntityAccess } from './entity-access.js';
 export type { EntityOperation, EntityAccessContext } from './entity-access.js';
 
-export { loginHandler, logoutHandler, registerHandler } from './auth-routes.js';
-
-export {
-  createPasswordResetToken,
-  validateResetToken,
-  resetPassword,
-  cleanExpiredResetTokens,
-  ensurePasswordResetTable,
-} from './password-reset.js';

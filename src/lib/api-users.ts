@@ -1,5 +1,15 @@
 import { apiFetch } from './api-client';
-import type { User } from './api-auth';
+
+export interface User {
+  uid: number;
+  uuid: string;
+  name: string;
+  email: string;
+  status: boolean;
+  roles?: string[];
+  created?: string;
+  changed?: string;
+}
 
 export interface UserListResponse {
   data: User[];

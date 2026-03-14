@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Providers } from './providers';
 import './globals.css';
 
+export const maxDuration = 60;
+
 export const metadata: Metadata = {
   title: 'DropJS Admin',
   description: 'DropJS content management system',

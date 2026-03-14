@@ -64,6 +64,7 @@
     "lucide-react": "^0.575.0",
     "mysql2": "^3.17.0",
     "next": "^15.3.3",
+    "next-auth": "^5.0.0-beta.30",
     "nodemailer": "^8.0.1",
     "pg": "^8.20.0",
     "php-serialize": "^5.1.3",

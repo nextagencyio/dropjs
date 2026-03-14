@@ -1,13 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
 import { CircleAlert, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login } = useAuth();
   const router = useRouter();
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -19,12 +17,18 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    try {
-      await login(name, password);
-      router.push('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+    const result = await signIn('credentials', {
+      name,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError('Invalid username or password');
       setLoading(false);
+    } else {
+      router.push('/');
+      router.refresh();
     }
   };
 
@@ -93,15 +97,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        <div className="mt-6 pt-6 border-t border-gin-border/50 flex justify-between items-center text-[13px]">
-          <Link href="/forgot-password" className="text-gin-primary font-medium hover:text-gin-primary-hover hover:underline transition-colors duration-200">
-            Forgot password?
-          </Link>
-          <Link href="/register" className="text-gin-primary font-medium hover:text-gin-primary-hover hover:underline transition-colors duration-200">
-            Create account
-          </Link>
-        </div>
       </div>
     </div>
   );

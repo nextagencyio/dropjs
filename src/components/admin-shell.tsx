@@ -22,18 +22,8 @@ export function AdminShell({
   const pathname = usePathname();
 
   const handleLogout = async () => {
-    // Call the API to destroy the session and clear the cookie
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'same-origin',
-    });
-    // Clear client-side storage for backward compatibility
-    localStorage.removeItem('dropjs_token');
-    localStorage.removeItem('dropjs_user');
-    window.location.href = '/login';
+    const { signOut } = await import('next-auth/react');
+    await signOut({ callbackUrl: '/login' });
   };
 
   // Build breadcrumb from path

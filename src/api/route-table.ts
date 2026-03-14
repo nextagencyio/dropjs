@@ -5,9 +5,6 @@
 
 import type { MiddlewareFn } from './middleware-runner.js';
 import {
-  loginHandler,
-  logoutHandler,
-  registerHandler,
   authenticate,
   requireAuth,
   requirePermission,
@@ -21,10 +18,8 @@ import {
   loadAllRoles,
   loadRole,
   updateRolePermissions,
-  createPasswordResetToken,
-  resetPassword,
 } from '../auth/index.js';
-import { getAllEntityTypes, Entity, sendPasswordResetEmail, sendContactNotification } from '../core/index.js';
+import { getAllEntityTypes, Entity, sendContactNotification } from '../core/index.js';
 import { db } from '../db/index.js';
 import { BadRequestError, NotFoundError } from './errors.js';
 import { createContentType, updateContentType, deleteContentType } from './handlers/content-types.js';
@@ -247,33 +242,6 @@ export function buildRouteTable(): RouteEntry[] {
 
     // ── CSRF token ───────────────────────────────────────────────────────
     { method: 'GET', pattern: '/api/csrf-token', skipCsrf: true, handler: csrfTokenHandler },
-
-    // ── Auth ─────────────────────────────────────────────────────────────
-    { method: 'POST', pattern: '/api/auth/login', skipCsrf: true, handler: loginHandler as any },
-    { method: 'POST', pattern: '/api/auth/logout', skipCsrf: true, handler: logoutHandler as any },
-    { method: 'POST', pattern: '/api/auth/register', skipCsrf: true, handler: registerHandler as any },
-    {
-      method: 'POST', pattern: '/api/auth/forgot-password', skipCsrf: true,
-      handler: async (req: any, res: any) => {
-        const { email } = req.body as { email?: string };
-        if (!email) { res.status(400).json({ error: { status: 400, message: 'email is required' } }); return; }
-        const result = await createPasswordResetToken(email);
-        if (result) {
-          await sendPasswordResetEmail(email, result.token);
-        }
-        res.json({ message: 'If the email exists, a password reset link has been sent.' });
-      },
-    },
-    {
-      method: 'POST', pattern: '/api/auth/reset-password', skipCsrf: true,
-      handler: async (req: any, res: any) => {
-        const { token, password } = req.body as { token?: string; password?: string };
-        if (!token || !password) { res.status(400).json({ error: { status: 400, message: 'token and password are required' } }); return; }
-        const success = await resetPassword(token, password);
-        if (!success) { res.status(400).json({ error: { status: 400, message: 'Invalid or expired reset token' } }); return; }
-        res.json({ message: 'Password has been reset successfully' });
-      },
-    },
 
     // ── Entity types ─────────────────────────────────────────────────────
     {

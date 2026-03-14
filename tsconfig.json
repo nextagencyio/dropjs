@@ -24,6 +24,10 @@
   },
   "include": [
     "next-env.d.ts",
+    "auth.ts",
+    "auth.config.ts",
+    "middleware.ts",
+    "src/types/**/*.ts",
     "src/app/**/*.ts",
     "src/app/**/*.tsx",
     "src/components/**/*.ts",

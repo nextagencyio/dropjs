@@ -52,25 +52,13 @@ export async function fetchMediaImages(): Promise<MediaListResponse> {
 }
 
 export async function uploadFile(file: File): Promise<{ data: FileData }> {
-  const token = localStorage.getItem('dropjs_token');
   const formData = new FormData();
   formData.append('file', file);
 
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Get CSRF token
-  const csrfMatch = document.cookie.match(/(^|;\s*)dropjs_csrf=([^;]+)/);
-  if (csrfMatch) {
-    headers['x-csrf-token'] = csrfMatch[2];
-  }
-
   const response = await fetch('/api/media/upload', {
     method: 'POST',
-    headers,
     body: formData,
+    credentials: 'same-origin',
   });
 
   if (!response.ok) {

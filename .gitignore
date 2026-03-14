@@ -12,3 +12,5 @@ test-results/
 plan.md
 *.png
 !public/*.png
+.vercel
+supabase/.temp/

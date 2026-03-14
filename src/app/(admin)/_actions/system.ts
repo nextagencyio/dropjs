@@ -765,6 +765,40 @@ export async function deleteFieldGroup(data: {
   }
 }
 
+// ── Themes ─────────────────────────────────────────────────────────
+
+export async function setDefaultTheme(themeName: string): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer themes');
+  if (!auth.success) return auth;
+
+  try {
+    const existing = await loadConfig('system.theme') ?? {};
+    const current = typeof existing === 'string' ? JSON.parse(existing) : existing;
+    await saveConfig('system.theme', { ...current, default: themeName });
+    revalidatePath('/appearance');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function setAdminTheme(themeName: string): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer themes');
+  if (!auth.success) return auth;
+
+  try {
+    const existing = await loadConfig('system.theme') ?? {};
+    const current = typeof existing === 'string' ? JSON.parse(existing) : existing;
+    await saveConfig('system.theme', { ...current, admin: themeName });
+    revalidatePath('/appearance');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
 // ── Paragraph Types ────────────────────────────────────────────────
 
 export async function createParagraphType(data: {

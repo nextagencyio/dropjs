@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api-server';
 import { PublicNav, UserLinks } from './nav-client';
 
+export const dynamic = 'force-dynamic';
+
 interface SiteConfig {
   name: string;
   slogan: string;

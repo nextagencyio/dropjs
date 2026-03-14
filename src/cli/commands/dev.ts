@@ -69,7 +69,7 @@ export async function startDev(): Promise<void> {
     }
   });
 
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3847;
   server.listen(port, () => {
     console.log(`drop.js server running at http://localhost:${port}\n`);
     console.log(`  API:   http://localhost:${port}/api`);

@@ -873,5 +873,95 @@ export async function getTermAncestors(vid: string, tid: number): Promise<TermAn
   return ancestors;
 }
 
+// ── Themes ──────────────────────────────────────────────────────────
+
+export interface ThemeInfo {
+  name: string;
+  machine_name: string;
+  description: string;
+  version: string;
+  engine: string;
+  admin: boolean;
+  regions: Record<string, string>;
+  screenshot: string | null;
+  is_default: boolean;
+  is_admin: boolean;
+}
+
+export interface ThemeConfig {
+  default: string;
+  admin: string;
+}
+
+export async function getThemes(): Promise<{ themes: ThemeInfo[]; config: ThemeConfig }> {
+  await ensureInitialized();
+  const fs = await import('fs');
+  const path = await import('path');
+  const yaml = await import('js-yaml');
+
+  // Load current theme config
+  const themeConfig = await loadConfig('system.theme');
+  const config: ThemeConfig = {
+    default: (themeConfig as any)?.default ?? 'claro',
+    admin: (themeConfig as any)?.admin ?? 'claro',
+  };
+
+  // Scan themes/ directory (cwd and package root)
+  const themesDir = path.join(process.cwd(), 'themes');
+  const packageRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..');
+  const packageThemesDir = path.join(packageRoot, 'themes');
+
+  const themeDirs = new Set<string>();
+  for (const dir of [themesDir, packageThemesDir]) {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const infoPath = path.join(dir, entry.name, 'theme.info.yml');
+          if (fs.existsSync(infoPath)) {
+            themeDirs.add(infoPath);
+          }
+        }
+      }
+    } catch {
+      // Directory doesn't exist, skip
+    }
+  }
+
+  const themes: ThemeInfo[] = [];
+  for (const infoPath of themeDirs) {
+    try {
+      const raw = fs.readFileSync(infoPath, 'utf-8');
+      const info = yaml.load(raw) as any;
+      const machineName = path.basename(path.dirname(infoPath));
+      const screenshotPath = path.join(path.dirname(infoPath), 'screenshot.png');
+
+      themes.push({
+        name: info.name ?? machineName,
+        machine_name: machineName,
+        description: info.description ?? '',
+        version: info.version ?? '0.0.0',
+        engine: info.engine ?? 'react',
+        admin: info.admin === true,
+        regions: info.regions ?? {},
+        screenshot: fs.existsSync(screenshotPath) ? `/themes/${machineName}/screenshot.png` : null,
+        is_default: machineName === config.default,
+        is_admin: machineName === config.admin,
+      });
+    } catch {
+      // Skip malformed theme info
+    }
+  }
+
+  // Sort: default theme first, then alphabetical
+  themes.sort((a, b) => {
+    if (a.is_default) return -1;
+    if (b.is_default) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return { themes, config };
+}
+
 // Re-export types for convenience
 export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig };

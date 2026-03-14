@@ -13,11 +13,14 @@ const nextConfig: NextConfig = {
       '.mjs': ['.mts', '.mjs'],
     };
 
-    if (isServer) {
-      // Externalize our core server modules so they're resolved at runtime via
-      // Node.js require() instead of being bundled by webpack. This ensures that
-      // Next.js server components share the same module instances (and singletons
-      // like DB connections, entity registries, session secrets) as the API handler.
+    if (isServer && !process.env.VERCEL) {
+      // In local dev (tsx), externalize our core server modules so they're
+      // resolved at runtime via Node.js require(). This ensures that Next.js
+      // server components share the same module instances (and singletons like
+      // DB connections, entity registries, session secrets) as the API handler.
+      //
+      // On Vercel there is no tsx loader, so we let webpack bundle everything.
+      // The globalThis.__dropjs_* singletons ensure state is still shared.
       const coreDirs = ['api', 'core', 'auth', 'db', 'field'].map(
         (d) => path.resolve(__dirname, 'src', d)
       );
@@ -58,7 +61,7 @@ const nextConfig: NextConfig = {
 
     return config;
   },
-  serverExternalPackages: ['knex', 'better-sqlite3'],
+  serverExternalPackages: ['knex', 'better-sqlite3', 'pg'],
 };
 
 export default nextConfig;

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, FileText, Building2, Puzzle, Settings, Users, BarChart3, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Home, FileText, Building2, Puzzle, Palette, Settings, Users, BarChart3, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import type { User } from '@/lib/api-auth';
 
 interface AdminToolbarProps {
@@ -28,6 +28,7 @@ const icons = {
   content: <FileText className="w-5 h-5" />,
   structure: <Building2 className="w-5 h-5" />,
   extend: <Puzzle className="w-5 h-5" />,
+  appearance: <Palette className="w-5 h-5" />,
   config: <Settings className="w-5 h-5" />,
   people: <Users className="w-5 h-5" />,
   reports: <BarChart3 className="w-5 h-5" />,
@@ -54,6 +55,7 @@ const menuItems: MenuItem[] = [
     ],
   },
   { label: 'Extend', icon: icons.extend, href: '/extend' },
+  { label: 'Appearance', icon: icons.appearance, href: '/appearance' },
   { label: 'Configuration', icon: icons.config, href: '/config' },
   {
     label: 'People',

@@ -992,22 +992,26 @@ export async function getPublishedNodes(params: {
   let total = 0;
 
   for (const bundle of params.bundles) {
-    const query = new EntityQuery('node');
-    query.condition('type', bundle);
-    query.condition('status', 1);
-    if (params.promote) query.condition('promote', 1);
-    query.sort('created', 'DESC');
+    try {
+      const query = new EntityQuery('node');
+      query.condition('type', bundle);
+      query.condition('status', 1);
+      if (params.promote) query.condition('promote', 1);
+      query.sort('created', 'DESC');
 
-    const allIds = await query.execute();
-    total += allIds.length;
+      const allIds = await query.execute();
+      total += allIds.length;
 
-    const offset = params.offset ?? 0;
-    const limit = params.limit ?? 1000;
-    const pageIds = allIds.slice(offset, offset + limit);
+      const offset = params.offset ?? 0;
+      const limit = params.limit ?? 1000;
+      const pageIds = allIds.slice(offset, offset + limit);
 
-    for (const id of pageIds) {
-      const entity = await Entity.load('node', id);
-      if (entity) allData.push(entity.toJSON());
+      for (const id of pageIds) {
+        const entity = await Entity.load('node', id);
+        if (entity) allData.push(entity.toJSON());
+      }
+    } catch {
+      // Bundle may not exist on this database — skip
     }
   }
 
@@ -1022,14 +1026,18 @@ export interface TaxonomyTermSummary {
 export async function getTaxonomyTerms(vocabulary: string): Promise<TaxonomyTermSummary[]> {
   await ensureInitialized();
 
-  const rows = await db
-    .select('taxonomy_term_field_data', 'tfd')
-    .fields('tfd', ['tid', 'name'])
-    .condition('tfd.type', vocabulary)
-    .condition('tfd.langcode', 'en')
-    .execute<{ tid: number; name: string }>();
+  try {
+    const rows = await db
+      .select('taxonomy_term_field_data', 'tfd')
+      .fields('tfd', ['tid', 'name'])
+      .condition('tfd.type', vocabulary)
+      .condition('tfd.langcode', 'en')
+      .execute<{ tid: number; name: string }>();
 
-  return rows;
+    return rows;
+  } catch {
+    return [];
+  }
 }
 
 export async function getUserProfile(uid: number): Promise<{ uid: number; name: string; created: string; roles: string[] } | null> {

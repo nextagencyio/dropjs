@@ -260,6 +260,84 @@ export async function deleteField(
   }
 }
 
+export async function loadEntityTypeDefinitionsAction(): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('access content');
+  if (!auth.success) return auth;
+
+  try {
+    const types = getAllEntityTypes();
+    return { success: true, data: types };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function loadEntityAction(
+  entityType: string,
+  id: number,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('access content');
+  if (!auth.success) return auth;
+
+  try {
+    const entity = await Entity.load(entityType, id);
+    if (!entity) return { success: false, error: 'Entity not found' };
+    return { success: true, data: entity.toJSON() };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function createPreviewAction(
+  entityType: string,
+  bundle: string,
+  data: Record<string, unknown>,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('access content');
+  if (!auth.success) return auth;
+
+  try {
+    const { createPreview } = await import('../../../core/preview');
+    const id = await createPreview(entityType, bundle, data, auth.user.uid ?? 0);
+    return { success: true, data: { id } };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function searchEntitiesAction(
+  entityType: string,
+  bundle: string,
+  search: string,
+  limit = 10,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('access content');
+  if (!auth.success) return auth;
+
+  try {
+    const query = Entity.query(entityType);
+    query.condition('type', bundle);
+    if (search) {
+      query.condition('title', `%${search}%`, 'LIKE');
+    }
+    query.range(0, limit);
+    const ids = await query.execute();
+    const entities = await Promise.all(
+      ids.map((id) => Entity.load(entityType, id)),
+    );
+    const data = entities
+      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .map((e) => e.toJSON());
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
 export async function reorderFields(
   entityType: string,
   bundle: string,

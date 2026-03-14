@@ -6,8 +6,8 @@ import Link from 'next/link';
 import {
   createWebhook,
   deleteWebhook,
+  updateWebhookAction,
 } from '@/app/(admin)/_actions/system';
-import { apiFetch } from '@/lib/api-client';
 
 const AVAILABLE_EVENTS = [
   'entity:create',
@@ -82,10 +82,11 @@ export default function WebhooksClient({ initialWebhooks }: WebhooksClientProps)
   const handleToggleActive = async (webhook: WebhookData) => {
     setError('');
     try {
-      await apiFetch(`/webhooks/${webhook.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ active: !webhook.active }),
-      });
+      const result = await updateWebhookAction(webhook.id, { active: !webhook.active });
+      if (!result.success) {
+        setError(result.error || 'Failed to toggle webhook');
+        return;
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle webhook');

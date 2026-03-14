@@ -3,26 +3,37 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CircleAlert, ArrowLeft, Eye } from 'lucide-react';
-import { apiFetch } from '@/lib/api-client';
-import { fetchEntityTypes } from '@/lib/api-entities';
-import type { EntityTypeDefinition } from '@/lib/api-entities';
+import {
+  loadPreviewAction,
+  loadEntityTypesForPreviewAction,
+} from '@/app/(admin)/_actions/preview';
 
-interface PreviewResponse {
-  data: {
-    id: string;
-    entity_type: string;
-    bundle: string;
-    data: Record<string, unknown>;
-    uid: number;
-    created: number;
-    expires: number;
-  };
+interface PreviewData {
+  id: string;
+  entity_type: string;
+  bundle: string;
+  data: Record<string, unknown>;
+  uid: number;
+  created: number;
+  expires: number;
+}
+
+interface FieldDefinition {
+  type: string;
+  label: string;
+}
+
+interface EntityTypeDefinition {
+  entity_type: string;
+  bundle: string;
+  label: string;
+  fields: Record<string, FieldDefinition>;
 }
 
 const BASE_FIELDS = new Set(['nid', 'uuid', 'type', 'uid', 'created', 'changed']);
 
 export function PreviewContent({ previewId }: { previewId: string }) {
-  const [preview, setPreview] = useState<PreviewResponse['data'] | null>(null);
+  const [preview, setPreview] = useState<PreviewData | null>(null);
   const [definition, setDefinition] = useState<EntityTypeDefinition | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,14 +47,23 @@ export function PreviewContent({ previewId }: { previewId: string }) {
       }
 
       try {
-        const res = await apiFetch<PreviewResponse>(`/preview/${previewId}`);
-        setPreview(res.data);
+        const previewResult = await loadPreviewAction(previewId);
+        if (!previewResult.success) {
+          setError(previewResult.error || 'Failed to load preview');
+          setLoading(false);
+          return;
+        }
+        const previewData = previewResult.data as PreviewData;
+        setPreview(previewData);
 
-        const types = await fetchEntityTypes();
-        const def = types.find(
-          (t) => t.entity_type === res.data.entity_type && t.bundle === res.data.bundle,
-        );
-        setDefinition(def ?? null);
+        const typesResult = await loadEntityTypesForPreviewAction();
+        if (typesResult.success) {
+          const types = typesResult.data as EntityTypeDefinition[];
+          const def = types.find(
+            (t) => t.entity_type === previewData.entity_type && t.bundle === previewData.bundle,
+          );
+          setDefinition(def ?? null);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load preview');
       }

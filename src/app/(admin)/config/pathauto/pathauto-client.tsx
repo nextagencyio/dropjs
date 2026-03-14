@@ -3,7 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-client';
+import {
+  createPathautoPatternAction,
+  updatePathautoPatternAction,
+  deletePathautoPatternAction,
+  bulkGenerateAliasesAction,
+} from '@/app/(admin)/_actions/system';
 
 interface PathautoPattern {
   id: string;
@@ -50,17 +55,18 @@ export default function PathautoClient({ initialPatterns }: PathautoClientProps)
     setError('');
     setSuccess('');
     try {
-      await apiFetch('/pathauto/patterns', {
-        method: 'POST',
-        body: JSON.stringify({
-          id: newId,
-          entity_type: newEntityType,
-          bundle: newBundle || null,
-          pattern: newPattern,
-          weight: newWeight,
-          enabled: true,
-        }),
+      const result = await createPathautoPatternAction({
+        id: newId,
+        entity_type: newEntityType,
+        bundle: newBundle || null,
+        pattern: newPattern,
+        weight: newWeight,
+        enabled: true,
       });
+      if (!result.success) {
+        setError(result.error || 'Failed to create pattern');
+        return;
+      }
       setShowAdd(false);
       setNewId('');
       setNewBundle('');
@@ -76,10 +82,11 @@ export default function PathautoClient({ initialPatterns }: PathautoClientProps)
   const handleToggleEnabled = async (p: PathautoPattern) => {
     setError('');
     try {
-      await apiFetch(`/pathauto/patterns/${p.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ enabled: !p.enabled }),
-      });
+      const result = await updatePathautoPatternAction(p.id, { enabled: !p.enabled });
+      if (!result.success) {
+        setError(result.error || 'Failed to toggle pattern');
+        return;
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle pattern');
@@ -91,7 +98,11 @@ export default function PathautoClient({ initialPatterns }: PathautoClientProps)
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/pathauto/patterns/${id}`, { method: 'DELETE' });
+      const result = await deletePathautoPatternAction(id);
+      if (!result.success) {
+        setError(result.error || 'Failed to delete pattern');
+        return;
+      }
       setSuccess('Pattern deleted.');
       router.refresh();
     } catch (err) {
@@ -104,17 +115,16 @@ export default function PathautoClient({ initialPatterns }: PathautoClientProps)
     setError('');
     setSuccess('');
     try {
-      const res = await apiFetch<{ data: { generated: number } }>(
-        '/pathauto/generate',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            entity_type: bulkEntityType,
-            bundle: bulkBundle || undefined,
-          }),
-        },
-      );
-      setSuccess(`Generated ${res.data.generated} aliases.`);
+      const result = await bulkGenerateAliasesAction({
+        entity_type: bulkEntityType,
+        bundle: bulkBundle || undefined,
+      });
+      if (!result.success) {
+        setError(result.error || 'Failed to generate aliases');
+        return;
+      }
+      const generated = (result.data as { generated: number }).generated;
+      setSuccess(`Generated ${generated} aliases.`);
       setShowBulk(false);
     } catch (err) {
       setError(

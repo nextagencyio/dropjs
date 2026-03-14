@@ -909,6 +909,285 @@ export async function loadShortcutsAction(): Promise<ActionResult> {
   }
 }
 
+// ── Webhook Update ──────────────────────────────────────────────────
+
+export async function updateWebhookAction(id: number, data: {
+  active?: boolean;
+  url?: string;
+  events?: string[];
+  secret?: string;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { updateWebhook: coreUpdateWebhook } = await import('../../../core/webhooks');
+    const webhook = await coreUpdateWebhook(id, data);
+    revalidatePath('/config/webhooks');
+    return { success: true, data: webhook };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── Languages ───────────────────────────────────────────────────────
+
+export async function createLanguageAction(data: {
+  id: string;
+  label: string;
+  direction: 'ltr' | 'rtl';
+  enabled?: boolean;
+  weight?: number;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer languages');
+  if (!auth.success) return auth;
+
+  try {
+    const { addLanguage } = await import('../../../core/translation');
+    const lang = await addLanguage({ weight: 0, enabled: true, ...data });
+    revalidatePath('/config/languages');
+    return { success: true, data: lang };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updateLanguageAction(id: string, data: {
+  enabled?: boolean;
+  label?: string;
+  direction?: 'ltr' | 'rtl';
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer languages');
+  if (!auth.success) return auth;
+
+  try {
+    const translation = await import('../../../core/translation');
+    if (data.enabled !== undefined) {
+      await translation.setLanguageEnabled(id, data.enabled);
+    }
+    const { enabled: _e, ...rest } = data;
+    if (Object.keys(rest).length > 0) {
+      await translation.updateLanguage(id, rest);
+    }
+    revalidatePath('/config/languages');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function deleteLanguageAction(id: string): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer languages');
+  if (!auth.success) return auth;
+
+  try {
+    const { removeLanguage } = await import('../../../core/translation');
+    await removeLanguage(id);
+    revalidatePath('/config/languages');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── REST Resources ──────────────────────────────────────────────────
+
+export async function loadRestResourcesAction(): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { getAllRestResources } = await import('../../../core/rest-resource');
+    const resources = getAllRestResources();
+    return { success: true, data: resources };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function toggleRestResourceAction(id: string, enable: boolean): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { enableRestResource, disableRestResource } = await import('../../../core/rest-resource');
+    if (enable) {
+      await enableRestResource(id);
+    } else {
+      await disableRestResource(id);
+    }
+    revalidatePath('/config/rest-resources');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── Pathauto Patterns ───────────────────────────────────────────────
+
+export async function createPathautoPatternAction(data: {
+  id: string;
+  entity_type: string;
+  bundle: string | null;
+  pattern: string;
+  weight: number;
+  enabled: boolean;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer url aliases');
+  if (!auth.success) return auth;
+
+  try {
+    const { getPathautoPattern, savePathautoPattern } = await import('../../../core/pathauto');
+    const existing = await getPathautoPattern(data.id);
+    if (existing) return { success: false, error: `Pattern "${data.id}" already exists` };
+    await savePathautoPattern(data);
+    revalidatePath('/config/pathauto');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updatePathautoPatternAction(id: string, data: {
+  enabled?: boolean;
+  pattern?: string;
+  weight?: number;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer url aliases');
+  if (!auth.success) return auth;
+
+  try {
+    const { getPathautoPattern, savePathautoPattern } = await import('../../../core/pathauto');
+    const existing = await getPathautoPattern(id);
+    if (!existing) return { success: false, error: `Pattern "${id}" not found` };
+    await savePathautoPattern({ ...existing, ...data });
+    revalidatePath('/config/pathauto');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function deletePathautoPatternAction(id: string): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer url aliases');
+  if (!auth.success) return auth;
+
+  try {
+    const { deletePathautoPattern } = await import('../../../core/pathauto');
+    await deletePathautoPattern(id);
+    revalidatePath('/config/pathauto');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function bulkGenerateAliasesAction(data: {
+  entity_type: string;
+  bundle?: string;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer url aliases');
+  if (!auth.success) return auth;
+
+  try {
+    const { bulkGenerateAliases } = await import('../../../core/pathauto');
+    const generated = await bulkGenerateAliases(data.entity_type, data.bundle);
+    return { success: true, data: { generated } };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── Actions & Triggers ──────────────────────────────────────────────
+
+export async function loadActionsAndTriggersAction(): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { getAllActions, listTriggers } = await import('../../../core/actions');
+    const actions = getAllActions();
+    const triggers = await listTriggers();
+    return { success: true, data: { actions, triggers } };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function createTriggerAction(data: {
+  label: string;
+  event: string;
+  action_id: string;
+  conditions: Record<string, unknown>;
+  enabled: boolean;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { getAction, createTrigger } = await import('../../../core/actions');
+    const action = getAction(data.action_id);
+    if (!action) return { success: false, error: `Action "${data.action_id}" not found` };
+    const trigger = await createTrigger(data);
+    revalidatePath('/config/actions');
+    return { success: true, data: trigger };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updateTriggerAction(id: number, data: {
+  enabled?: boolean;
+  label?: string;
+  event?: string;
+  action_id?: string;
+  conditions?: Record<string, unknown>;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { loadTrigger, updateTrigger } = await import('../../../core/actions');
+    const existing = await loadTrigger(id);
+    if (!existing) return { success: false, error: `Trigger "${id}" not found` };
+    await updateTrigger(id, data);
+    revalidatePath('/config/actions');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function deleteTriggerAction(id: number): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { loadTrigger, deleteTrigger } = await import('../../../core/actions');
+    const existing = await loadTrigger(id);
+    if (!existing) return { success: false, error: `Trigger "${id}" not found` };
+    await deleteTrigger(id);
+    revalidatePath('/config/actions');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
 // ── Media List (server action for client-side pagination) ───────────
 
 export async function loadMediaListAction(params?: {

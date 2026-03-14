@@ -96,7 +96,7 @@ src/
 ├── migrate/      Drupal-to-drop.js migration tools
 ├── app/          Next.js admin UI + SSR public frontend (React 19, App Router)
 ├── components/   Admin UI + public frontend components
-└── lib/          Client-side API utilities + server-side fetch
+└── lib/          Server-side data layer, auth helpers, media upload
 ```
 
 ## Web Services

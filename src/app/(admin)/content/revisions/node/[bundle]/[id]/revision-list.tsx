@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronRight, ArrowLeft, CircleAlert, Clock, User, ArrowLeftRight, Loader2, RotateCcw } from 'lucide-react';
-import { apiFetch } from '@/lib/api-client';
+import {
+  loadRevisionsAction,
+  revertRevisionAction,
+  loadRevisionDiffAction,
+} from '@/app/(admin)/_actions/revisions';
 
 interface Revision {
   vid: number;
@@ -11,23 +15,10 @@ interface Revision {
   revision_timestamp: number;
 }
 
-interface RevisionListResponse {
-  data: Revision[];
-  meta: { current_vid: number };
-}
-
 interface FieldChange {
   field: string;
   old_value: unknown;
   new_value: unknown;
-}
-
-interface DiffResponse {
-  data: {
-    from_vid: number;
-    to_vid: number;
-    changes: FieldChange[];
-  };
 }
 
 function relativeTime(timestamp: number): string {
@@ -132,11 +123,14 @@ export function RevisionList({ bundle, id }: { bundle: string; id: number }) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await apiFetch<RevisionListResponse>(
-          `/node/${bundle}/${id}/revisions`,
-        );
-        setRevisions(res.data);
-        setCurrentVid(res.meta.current_vid);
+        const result = await loadRevisionsAction('node', bundle, id);
+        if (result.success) {
+          const d = result.data as { revisions: Revision[]; current_vid: number };
+          setRevisions(d.revisions);
+          setCurrentVid(d.current_vid);
+        } else {
+          setError(result.error || 'Failed to load revisions');
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load revisions');
       }
@@ -150,16 +144,16 @@ export function RevisionList({ bundle, id }: { bundle: string; id: number }) {
     setReverting(vid);
     setError(null);
     try {
-      await apiFetch(`/node/${bundle}/${id}/revisions/${vid}/revert`, {
-        method: 'POST',
-      });
-      const res = await apiFetch<RevisionListResponse>(
-        `/node/${bundle}/${id}/revisions`,
-      );
-      setRevisions(res.data);
-      setCurrentVid(res.meta.current_vid);
-      setExpandedDiff(null);
-      setDiffData({});
+      const result = await revertRevisionAction('node', bundle, id, vid);
+      if (result.success) {
+        const d = result.data as { revisions: Revision[]; current_vid: number };
+        setRevisions(d.revisions);
+        setCurrentVid(d.current_vid);
+        setExpandedDiff(null);
+        setDiffData({});
+      } else {
+        setError(result.error || 'Revert failed');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Revert failed');
     }
@@ -178,10 +172,14 @@ export function RevisionList({ bundle, id }: { bundle: string; id: number }) {
 
     setDiffLoading(vid);
     try {
-      const res = await apiFetch<DiffResponse>(
-        `/node/${bundle}/${id}/revisions/${prevVid}/diff/${vid}`,
-      );
-      setDiffData((prev) => ({ ...prev, [vid]: res.data.changes }));
+      const result = await loadRevisionDiffAction('node', bundle, id, prevVid, vid);
+      if (result.success) {
+        const d = result.data as { changes: FieldChange[] };
+        setDiffData((prev) => ({ ...prev, [vid]: d.changes }));
+      } else {
+        setError(result.error || 'Failed to load diff');
+        setExpandedDiff(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load diff');
       setExpandedDiff(null);

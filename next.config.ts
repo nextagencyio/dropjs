@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 const nextConfig: NextConfig = {
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // The core codebase uses Node.js ESM-style .js extensions in TypeScript
     // imports (e.g. `import { foo } from './bar.js'`). Next.js webpack needs
     // to resolve these to .ts files.
@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
       '.mjs': ['.mts', '.mjs'],
     };
 
-    if (isServer && !process.env.VERCEL) {
+    if (isServer && dev && !process.env.VERCEL) {
       // In local dev (tsx), externalize our core server modules so they're
       // resolved at runtime via Node.js require(). This ensures that Next.js
       // server components share the same module instances (and singletons like
@@ -46,6 +46,12 @@ const nextConfig: NextConfig = {
                       resolvedPath = resolved + ext;
                       break;
                     }
+                  }
+                } else if (path.extname(resolved) === '.js') {
+                  // Resolve .js imports to .ts source files (ESM-style imports)
+                  const tsPath = resolved.replace(/\.js$/, '.ts');
+                  if (fs.existsSync(tsPath)) {
+                    resolvedPath = tsPath;
                   }
                 }
                 return callback(null, 'commonjs ' + resolvedPath);

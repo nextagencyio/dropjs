@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-client';
+import {
+  createLanguageAction,
+  updateLanguageAction,
+  deleteLanguageAction,
+} from '@/app/(admin)/_actions/system';
 
 interface Language {
   id: string;
@@ -32,15 +36,16 @@ export default function LanguagesClient({ initialLanguages }: LanguagesClientPro
     setError('');
     setSuccess('');
     try {
-      await apiFetch('/languages', {
-        method: 'POST',
-        body: JSON.stringify({
-          id: newId,
-          label: newLabel,
-          direction: newDirection,
-          enabled: true,
-        }),
+      const result = await createLanguageAction({
+        id: newId,
+        label: newLabel,
+        direction: newDirection,
+        enabled: true,
       });
+      if (!result.success) {
+        setError(result.error || 'Failed to add language');
+        return;
+      }
       setShowAdd(false);
       setNewId('');
       setNewLabel('');
@@ -55,10 +60,11 @@ export default function LanguagesClient({ initialLanguages }: LanguagesClientPro
   const handleToggleEnabled = async (lang: Language) => {
     setError('');
     try {
-      await apiFetch(`/languages/${lang.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ enabled: !lang.enabled }),
-      });
+      const result = await updateLanguageAction(lang.id, { enabled: !lang.enabled });
+      if (!result.success) {
+        setError(result.error || 'Failed to toggle language');
+        return;
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle language');
@@ -71,7 +77,11 @@ export default function LanguagesClient({ initialLanguages }: LanguagesClientPro
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/languages/${id}`, { method: 'DELETE' });
+      const result = await deleteLanguageAction(id);
+      if (!result.success) {
+        setError(result.error || 'Failed to remove language');
+        return;
+      }
       setSuccess('Language removed.');
       router.refresh();
     } catch (err) {

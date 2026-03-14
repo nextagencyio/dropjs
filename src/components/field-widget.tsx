@@ -2,10 +2,18 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PlusCircle, ChevronDown, X, FileText, Download, Upload, Loader2, Image, Link2 } from 'lucide-react';
-import type { FieldDefinition } from '@/lib/api-entities';
-import { fetchEntityList } from '@/lib/api-entities';
+import { searchEntitiesAction } from '@/app/(admin)/_actions/entity';
 import { RichTextEditor } from './rich-text-editor';
 import { uploadFile } from '@/lib/api-media';
+
+export interface FieldDefinition {
+  type: string;
+  label: string;
+  required?: boolean;
+  cardinality?: number;
+  weight?: number;
+  settings?: Record<string, unknown>;
+}
 
 interface FieldWidgetProps {
   fieldName: string;
@@ -598,17 +606,19 @@ function EntityReferenceAutocomplete({
         return;
       }
       try {
-        const res = await fetchEntityList(targetType, targetBundle, {
-          limit: 10,
-          search: term,
-        });
-        setResults(
-          res.data.map((d) => ({
-            nid: d.nid!,
-            title: (d.title as string) ?? `#${d.nid}`,
-          })),
-        );
-        setShowDropdown(true);
+        const result = await searchEntitiesAction(targetType, targetBundle, term, 10);
+        if (result.success) {
+          const entities = result.data as Array<Record<string, unknown>>;
+          setResults(
+            entities.map((d) => ({
+              nid: d.nid as number,
+              title: (d.title as string) ?? `#${d.nid}`,
+            })),
+          );
+          setShowDropdown(true);
+        } else {
+          setResults([]);
+        }
       } catch {
         setResults([]);
       }

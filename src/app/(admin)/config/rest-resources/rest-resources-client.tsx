@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-client';
+import {
+  loadRestResourcesAction,
+  toggleRestResourceAction,
+} from '@/app/(admin)/_actions/system';
 
 interface RestResourceData {
   id: string;
@@ -15,19 +18,6 @@ interface RestResourceData {
   enabled: boolean;
 }
 
-async function fetchRestResources(): Promise<RestResourceData[]> {
-  const res = await apiFetch<{ data: RestResourceData[] }>('/rest-resources');
-  return res.data;
-}
-
-async function enableRestResource(id: string): Promise<void> {
-  await apiFetch(`/rest-resources/${id}/enable`, { method: 'POST' });
-}
-
-async function disableRestResource(id: string): Promise<void> {
-  await apiFetch(`/rest-resources/${id}/disable`, { method: 'POST' });
-}
-
 export default function RestResourcesClient() {
   const router = useRouter();
   const [resources, setResources] = useState<RestResourceData[]>([]);
@@ -35,17 +25,19 @@ export default function RestResourcesClient() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const loadResources = () => {
+  const loadResources = async () => {
     setLoading(true);
-    fetchRestResources()
-      .then((data) => {
-        setResources(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load REST resources');
-        setLoading(false);
-      });
+    try {
+      const result = await loadRestResourcesAction();
+      if (result.success) {
+        setResources(result.data as RestResourceData[]);
+      } else {
+        setError(result.error || 'Failed to load REST resources');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load REST resources');
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -56,13 +48,12 @@ export default function RestResourcesClient() {
     setError('');
     setSuccess('');
     try {
-      if (resource.enabled) {
-        await disableRestResource(resource.id);
-        setSuccess(`REST resource "${resource.label}" disabled.`);
-      } else {
-        await enableRestResource(resource.id);
-        setSuccess(`REST resource "${resource.label}" enabled.`);
+      const result = await toggleRestResourceAction(resource.id, !resource.enabled);
+      if (!result.success) {
+        setError(result.error || 'Failed to toggle resource');
+        return;
       }
+      setSuccess(`REST resource "${resource.label}" ${resource.enabled ? 'disabled' : 'enabled'}.`);
       loadResources();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle resource');

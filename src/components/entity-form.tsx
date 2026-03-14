@@ -3,10 +3,31 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CircleAlert, Calendar, Clock, Loader2, Eye } from 'lucide-react';
-import type { EntityTypeDefinition, EntityData } from '@/lib/api-entities';
-import { fetchEntityTypes, fetchEntity, createEntity, updateEntity } from '@/lib/api-entities';
-import { apiFetch } from '@/lib/api-client';
+import {
+  loadEntityTypeDefinitionsAction,
+  loadEntityAction,
+  createEntity,
+  updateEntity,
+  createPreviewAction,
+} from '@/app/(admin)/_actions/entity';
 import { FieldWidget } from './field-widget';
+
+interface FieldDefinition {
+  type: string;
+  label: string;
+  required?: boolean;
+  cardinality?: number;
+  weight?: number;
+  settings?: Record<string, unknown>;
+}
+
+interface EntityTypeDefinition {
+  entity_type: string;
+  bundle: string;
+  label: string;
+  description?: string;
+  fields: Record<string, FieldDefinition>;
+}
 
 interface EntityFormProps {
   entityType: string;
@@ -30,7 +51,13 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
   useEffect(() => {
     async function load() {
       try {
-        const types = await fetchEntityTypes();
+        const typesResult = await loadEntityTypeDefinitionsAction();
+        if (!typesResult.success) {
+          setError(typesResult.error || 'Failed to load entity types');
+          setLoading(false);
+          return;
+        }
+        const types = typesResult.data as EntityTypeDefinition[];
         const def = types.find(
           (t) => t.entity_type === entityType && t.bundle === bundle,
         );
@@ -42,8 +69,13 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
         setDefinition(def);
 
         if (entityId) {
-          const entity = await fetchEntity(entityType, bundle, entityId);
-          setFormData(entity);
+          const entityResult = await loadEntityAction(entityType, entityId);
+          if (!entityResult.success) {
+            setError(entityResult.error || 'Failed to load entity');
+            setLoading(false);
+            return;
+          }
+          setFormData(entityResult.data as Record<string, unknown>);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load');
@@ -63,10 +95,13 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
       : formData;
 
     try {
-      if (entityId) {
-        await updateEntity(entityType, bundle, entityId, dataToSave);
-      } else {
-        await createEntity(entityType, bundle, dataToSave);
+      const result = entityId
+        ? await updateEntity(entityType, bundle, entityId, dataToSave)
+        : await createEntity(entityType, bundle, dataToSave);
+      if (!result.success) {
+        setError(result.error || 'Save failed');
+        setSaving(false);
+        return;
       }
       router.push('/content');
     } catch (err) {
@@ -78,15 +113,13 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
   const handlePreview = async () => {
     setError(null);
     try {
-      const result = await apiFetch<{ data: { id: string; url: string } }>('/preview', {
-        method: 'POST',
-        body: JSON.stringify({
-          entity_type: entityType,
-          bundle,
-          data: formData,
-        }),
-      });
-      window.open(`/preview/${result.data.id}`, '_blank');
+      const result = await createPreviewAction(entityType, bundle, formData);
+      if (!result.success) {
+        setError(result.error || 'Preview failed');
+        return;
+      }
+      const { id } = result.data as { id: string };
+      window.open(`/preview/${id}`, '_blank');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Preview failed');
     }

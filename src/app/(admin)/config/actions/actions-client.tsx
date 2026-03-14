@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-client';
+import {
+  loadActionsAndTriggersAction,
+  createTriggerAction,
+  updateTriggerAction,
+  deleteTriggerAction,
+} from '@/app/(admin)/_actions/system';
 
 interface ActionDefinition {
   id: string;
@@ -13,7 +18,7 @@ interface ActionDefinition {
 }
 
 interface Trigger {
-  id: string;
+  id: number;
   label: string;
   event: string;
   action_id: string;
@@ -65,12 +70,14 @@ export default function ActionsClient() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [actionsRes, triggersRes] = await Promise.all([
-        apiFetch<{ data: ActionDefinition[] }>('/actions'),
-        apiFetch<{ data: Trigger[] }>('/triggers'),
-      ]);
-      setActions(actionsRes.data);
-      setTriggers(triggersRes.data);
+      const result = await loadActionsAndTriggersAction();
+      if (result.success) {
+        const d = result.data as { actions: ActionDefinition[]; triggers: Trigger[] };
+        setActions(d.actions);
+        setTriggers(d.triggers);
+      } else {
+        setError(result.error || 'Failed to load data');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     }
@@ -97,16 +104,17 @@ export default function ActionsClient() {
     }
 
     try {
-      await apiFetch('/triggers', {
-        method: 'POST',
-        body: JSON.stringify({
-          label: newLabel,
-          event: newEvent,
-          action_id: newActionId,
-          conditions: parsedConditions,
-          enabled: newEnabled,
-        }),
+      const result = await createTriggerAction({
+        label: newLabel,
+        event: newEvent,
+        action_id: newActionId,
+        conditions: parsedConditions as Record<string, unknown>,
+        enabled: newEnabled,
       });
+      if (!result.success) {
+        setError(result.error || 'Failed to create trigger');
+        return;
+      }
       setShowAddTrigger(false);
       setNewLabel('');
       setNewEvent('');
@@ -123,22 +131,27 @@ export default function ActionsClient() {
   const handleToggleEnabled = async (trigger: Trigger) => {
     setError('');
     try {
-      await apiFetch(`/triggers/${trigger.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ enabled: !trigger.enabled }),
-      });
+      const result = await updateTriggerAction(trigger.id, { enabled: !trigger.enabled });
+      if (!result.success) {
+        setError(result.error || 'Failed to toggle trigger');
+        return;
+      }
       loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle trigger');
     }
   };
 
-  const handleDeleteTrigger = async (triggerId: string, label: string) => {
+  const handleDeleteTrigger = async (triggerId: number, label: string) => {
     if (!confirm(`Delete the "${label}" trigger?`)) return;
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/triggers/${triggerId}`, { method: 'DELETE' });
+      const result = await deleteTriggerAction(triggerId);
+      if (!result.success) {
+        setError(result.error || 'Failed to delete trigger');
+        return;
+      }
       setSuccess('Trigger deleted.');
       loadData();
     } catch (err) {

@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api-client';
+import {
+  loadContactFormsAction,
+  createContactFormAction,
+  updateContactFormAction,
+  deleteContactFormAction,
+  loadContactMessagesAction,
+  updateContactMessageStatusAction,
+  deleteContactMessageAction,
+} from '@/app/(admin)/_actions/contact';
 
 interface ContactForm {
   id: number;
@@ -59,16 +67,16 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
   // Message state
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const loadForms = () => {
-    apiFetch<{ data: ContactForm[] }>('/contact/forms')
-      .then((res) => setForms(res.data))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load contact forms'));
+  const loadForms = async () => {
+    const result = await loadContactFormsAction();
+    if (result.success) setForms(result.data as ContactForm[]);
+    else setError(result.error || 'Failed to load contact forms');
   };
 
-  const loadMessages = () => {
-    apiFetch<{ data: ContactMessage[] }>('/contact/messages')
-      .then((res) => setMessages(res.data))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load messages'));
+  const loadMessages = async () => {
+    const result = await loadContactMessagesAction();
+    if (result.success) setMessages(result.data as ContactMessage[]);
+    else setError(result.error || 'Failed to load messages');
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -76,16 +84,17 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
     setError('');
     setSuccess('');
     try {
-      await apiFetch('/contact/forms', {
-        method: 'POST',
-        body: JSON.stringify({
-          machine_name: newMachineName,
-          label: newLabel,
-          description: newDescription,
-          recipients: newRecipients.split(',').map((r) => r.trim()).filter(Boolean),
-          auto_reply: newAutoReply,
-        }),
+      const result = await createContactFormAction({
+        machine_name: newMachineName,
+        label: newLabel,
+        description: newDescription,
+        recipients: newRecipients.split(',').map((r) => r.trim()).filter(Boolean),
+        auto_reply: newAutoReply,
       });
+      if (!result.success) {
+        setError(result.error || 'Failed to create contact form');
+        return;
+      }
       setShowAdd(false);
       setNewMachineName('');
       setNewLabel('');
@@ -113,15 +122,16 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/contact/forms/${editingId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          label: editLabel,
-          description: editDescription,
-          recipients: editRecipients.split(',').map((r) => r.trim()).filter(Boolean),
-          auto_reply: editAutoReply,
-        }),
+      const result = await updateContactFormAction(editingId, {
+        label: editLabel,
+        description: editDescription,
+        recipients: editRecipients.split(',').map((r) => r.trim()).filter(Boolean),
+        auto_reply: editAutoReply,
       });
+      if (!result.success) {
+        setError(result.error || 'Failed to update contact form');
+        return;
+      }
       setEditingId(null);
       setSuccess('Contact form updated.');
       loadForms();
@@ -136,7 +146,11 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/contact/forms/${machineName}`, { method: 'DELETE' });
+      const result = await deleteContactFormAction(machineName);
+      if (!result.success) {
+        setError(result.error || 'Failed to delete contact form');
+        return;
+      }
       setSuccess('Contact form deleted.');
       loadForms();
       router.refresh();
@@ -149,10 +163,11 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/contact/messages/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
-      });
+      const result = await updateContactMessageStatusAction(id, newStatus);
+      if (!result.success) {
+        setError(result.error || 'Failed to update message status');
+        return;
+      }
       setSuccess(`Message #${id} status updated.`);
       loadMessages();
     } catch (err) {
@@ -165,7 +180,11 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
     setError('');
     setSuccess('');
     try {
-      await apiFetch(`/contact/messages/${id}`, { method: 'DELETE' });
+      const result = await deleteContactMessageAction(id);
+      if (!result.success) {
+        setError(result.error || 'Failed to delete message');
+        return;
+      }
       setSuccess(`Message #${id} deleted.`);
       if (expandedId === id) setExpandedId(null);
       loadMessages();

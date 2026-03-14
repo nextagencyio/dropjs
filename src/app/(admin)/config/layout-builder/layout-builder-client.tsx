@@ -3,8 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2 } from 'lucide-react';
-import { apiFetch } from '@/lib/api-client';
-import { fetchEntityTypes, type EntityTypeDefinition } from '@/lib/api-entities';
+import {
+  loadLayoutTypesAction,
+  loadLayoutAction,
+  addLayoutSectionAction,
+  removeLayoutSectionAction,
+  addLayoutComponentAction,
+  removeLayoutComponentAction,
+  loadEntityTypesAction,
+} from '@/app/(admin)/_actions/layout';
 
 // Types
 
@@ -18,6 +25,12 @@ interface LayoutTypeDefinition {
   label: string;
   description: string;
   regions: LayoutRegion[];
+}
+
+interface EntityTypeDefinition {
+  entity_type: string;
+  bundle: string;
+  label: string;
 }
 
 interface LayoutComponent {
@@ -41,85 +54,6 @@ interface LayoutData {
   bundle: string;
   viewMode: string;
   sections: LayoutSection[];
-}
-
-// API Functions
-
-async function fetchLayoutTypes(): Promise<LayoutTypeDefinition[]> {
-  const res = await apiFetch<{ data: LayoutTypeDefinition[] }>('/layout-types');
-  return res.data;
-}
-
-async function fetchLayout(
-  entityType: string,
-  bundle: string,
-  viewMode: string,
-): Promise<LayoutData | null> {
-  try {
-    const res = await apiFetch<{ data: LayoutData }>(
-      `/layout/${entityType}/${bundle}/${viewMode}`,
-    );
-    return res.data;
-  } catch (err: unknown) {
-    if (err && typeof err === 'object' && 'status' in err && (err as { status: number }).status === 404) {
-      return null;
-    }
-    throw err;
-  }
-}
-
-async function apiAddSection(
-  entityType: string,
-  bundle: string,
-  viewMode: string,
-  body: { type: string; weight: number },
-): Promise<LayoutData> {
-  const res = await apiFetch<{ data: LayoutData }>(
-    `/layout/${entityType}/${bundle}/${viewMode}/sections`,
-    { method: 'POST', body: JSON.stringify(body) },
-  );
-  return res.data;
-}
-
-async function apiRemoveSection(
-  entityType: string,
-  bundle: string,
-  viewMode: string,
-  sectionId: string,
-): Promise<LayoutData> {
-  const res = await apiFetch<{ data: LayoutData }>(
-    `/layout/${entityType}/${bundle}/${viewMode}/sections/${sectionId}`,
-    { method: 'DELETE' },
-  );
-  return res.data;
-}
-
-async function apiAddComponent(
-  entityType: string,
-  bundle: string,
-  viewMode: string,
-  sectionId: string,
-  body: { type: string; region: string; weight: number },
-): Promise<LayoutData> {
-  const res = await apiFetch<{ data: LayoutData }>(
-    `/layout/${entityType}/${bundle}/${viewMode}/sections/${sectionId}/components`,
-    { method: 'POST', body: JSON.stringify(body) },
-  );
-  return res.data;
-}
-
-async function apiRemoveComponent(
-  entityType: string,
-  bundle: string,
-  viewMode: string,
-  sectionId: string,
-  componentId: string,
-): Promise<LayoutData> {
-  const res = await apiFetch<{ data: LayoutData }>(
-    `/layout/${entityType}/${bundle}/${viewMode}/sections/${sectionId}/components/${componentId}`,
-    { method: 'DELETE' },
-  );
-  return res.data;
 }
 
 // Column width helpers
@@ -180,14 +114,15 @@ export default function LayoutBuilderClient() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [types, ltypes] = await Promise.all([
-          fetchEntityTypes(),
-          fetchLayoutTypes(),
+        const [typesResult, ltypesResult] = await Promise.all([
+          loadEntityTypesAction(),
+          loadLayoutTypesAction(),
         ]);
-        setEntityTypes(types);
-        setLayoutTypes(ltypes);
-        if (ltypes.length > 0) {
-          setNewSectionType(ltypes[0].id);
+        if (typesResult.success) setEntityTypes(typesResult.data as EntityTypeDefinition[]);
+        if (ltypesResult.success) {
+          const ltypes = ltypesResult.data as LayoutTypeDefinition[];
+          setLayoutTypes(ltypes);
+          if (ltypes.length > 0) setNewSectionType(ltypes[0].id);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -203,7 +138,7 @@ export default function LayoutBuilderClient() {
   );
 
   // Load layout when selection changes
-  const loadLayout = useCallback(async () => {
+  const loadLayoutFn = useCallback(async () => {
     if (!selectedEntityType || !selectedBundle || !selectedViewMode) {
       setLayout(null);
       return;
@@ -211,12 +146,17 @@ export default function LayoutBuilderClient() {
     setLayoutLoading(true);
     setError('');
     try {
-      const data = await fetchLayout(
+      const result = await loadLayoutAction(
         selectedEntityType,
         selectedBundle,
         selectedViewMode,
       );
-      setLayout(data);
+      if (result.success) {
+        setLayout(result.data as LayoutData | null);
+      } else {
+        setError(result.error || 'Failed to load layout');
+        setLayout(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load layout');
       setLayout(null);
@@ -225,8 +165,8 @@ export default function LayoutBuilderClient() {
   }, [selectedEntityType, selectedBundle, selectedViewMode]);
 
   useEffect(() => {
-    loadLayout();
-  }, [loadLayout]);
+    loadLayoutFn();
+  }, [loadLayoutFn]);
 
   // Reset bundle when entity type changes
   const handleEntityTypeChange = (value: string) => {
@@ -247,13 +187,17 @@ export default function LayoutBuilderClient() {
     setError('');
     setSuccess('');
     try {
-      const result = await apiAddSection(
+      const result = await addLayoutSectionAction(
         selectedEntityType,
         selectedBundle,
         selectedViewMode,
         { type: newSectionType, weight: newSectionWeight },
       );
-      setLayout(result);
+      if (!result.success) {
+        setError(result.error || 'Failed to add section');
+        return;
+      }
+      setLayout(result.data as LayoutData);
       setShowAddSection(false);
       setNewSectionWeight(0);
       setSuccess('Section added.');
@@ -267,13 +211,17 @@ export default function LayoutBuilderClient() {
     setError('');
     setSuccess('');
     try {
-      const result = await apiRemoveSection(
+      const result = await removeLayoutSectionAction(
         selectedEntityType,
         selectedBundle,
         selectedViewMode,
         sectionId,
       );
-      setLayout(result);
+      if (!result.success) {
+        setError(result.error || 'Failed to remove section');
+        return;
+      }
+      setLayout(result.data as LayoutData);
       setSuccess('Section removed.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove section');
@@ -285,7 +233,7 @@ export default function LayoutBuilderClient() {
     setError('');
     setSuccess('');
     try {
-      const result = await apiAddComponent(
+      const result = await addLayoutComponentAction(
         selectedEntityType,
         selectedBundle,
         selectedViewMode,
@@ -296,7 +244,11 @@ export default function LayoutBuilderClient() {
           weight: newComponentWeight,
         },
       );
-      setLayout(result);
+      if (!result.success) {
+        setError(result.error || 'Failed to add component');
+        return;
+      }
+      setLayout(result.data as LayoutData);
       setAddComponentTarget(null);
       setNewComponentType('block');
       setNewComponentWeight(0);
@@ -314,14 +266,18 @@ export default function LayoutBuilderClient() {
     setError('');
     setSuccess('');
     try {
-      const result = await apiRemoveComponent(
+      const result = await removeLayoutComponentAction(
         selectedEntityType,
         selectedBundle,
         selectedViewMode,
         sectionId,
         componentId,
       );
-      setLayout(result);
+      if (!result.success) {
+        setError(result.error || 'Failed to remove component');
+        return;
+      }
+      setLayout(result.data as LayoutData);
       setSuccess('Component removed.');
     } catch (err) {
       setError(

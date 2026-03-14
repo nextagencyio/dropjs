@@ -2,7 +2,24 @@
 
 import { useState } from 'react';
 import { setDefaultTheme, setAdminTheme } from '@/app/(admin)/_actions/system';
-import type { ThemeInfo, ThemeConfig } from '@/lib/server/data';
+
+interface ThemeInfo {
+  name: string;
+  machine_name: string;
+  description: string;
+  version: string;
+  engine: string;
+  admin: boolean;
+  regions: Record<string, string>;
+  screenshot: string | null;
+  is_default: boolean;
+  is_admin: boolean;
+}
+
+interface ThemeConfig {
+  default: string;
+  admin: string;
+}
 
 interface ThemeListProps {
   themes: ThemeInfo[];

@@ -26,28 +26,32 @@ export default async function ContentListPage({
   let allData: ContentEntity[] = [];
   let allTotal = 0;
 
-  for (const t of typesToFetch) {
-    const filters: Record<string, string> = {};
-    if (statusFilter === '1') filters.status = '1';
-    if (statusFilter === '0') filters.status = '0';
+  try {
+    for (const t of typesToFetch) {
+      const filters: Record<string, string> = {};
+      if (statusFilter === '1') filters.status = '1';
+      if (statusFilter === '0') filters.status = '0';
 
-    const res = await listEntities(t.entity_type, t.bundle, {
-      offset: typesToFetch.length === 1 ? offset : 0,
-      limit: typesToFetch.length === 1 ? limit : 100,
-      sort: '-changed',
-      filters,
-      search: search || undefined,
-    });
+      const res = await listEntities(t.entity_type, t.bundle, {
+        offset: typesToFetch.length === 1 ? offset : 0,
+        limit: typesToFetch.length === 1 ? limit : 100,
+        sort: '-changed',
+        filters,
+        search: search || undefined,
+      });
 
-    allData = allData.concat(
-      res.data.map((d: EntityData) => ({
-        ...d,
-        _entityType: t.entity_type,
-        _bundle: t.bundle,
-        _label: t.label,
-      })),
-    );
-    allTotal += res.meta.total;
+      allData = allData.concat(
+        res.data.map((d: EntityData) => ({
+          ...d,
+          _entityType: t.entity_type,
+          _bundle: t.bundle,
+          _label: t.label,
+        })),
+      );
+      allTotal += res.meta.total;
+    }
+  } catch (err) {
+    console.error('Content listEntities error:', err);
   }
 
   // Sort all results by changed date descending

@@ -5,7 +5,28 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Search, FileText, ChevronDown, Trash2 } from 'lucide-react';
 import { deleteEntity, updateEntity } from '@/app/(admin)/_actions/entity';
-import type { EntityTypeDefinition, EntityData } from '@/lib/server/data';
+
+interface EntityTypeDefinition {
+  entity_type: string;
+  bundle: string;
+  label: string;
+  description?: string;
+  fields: Record<string, unknown>;
+}
+
+interface EntityData {
+  [key: string]: unknown;
+  nid?: number;
+  vid?: number;
+  uuid?: string;
+  type?: string;
+  title?: string;
+  status?: boolean | number;
+  uid?: number;
+  created?: string | Date | number;
+  changed?: string | Date | number;
+  langcode?: string;
+}
 
 export interface ContentEntity extends EntityData {
   _entityType: string;

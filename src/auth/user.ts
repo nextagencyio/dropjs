@@ -245,9 +245,9 @@ export async function authenticateUser(
   );
   if (!valid) return null;
 
-  // Update last login timestamp
+  // Update last login timestamp (fire-and-forget — don't block auth response)
   const now = Math.floor(Date.now() / 1000);
-  await db.update('users_field_data').set({ login: now, access: now }).condition('uid', row.uid).execute();
+  db.update('users_field_data').set({ login: now, access: now }).condition('uid', row.uid).execute().catch(() => {});
 
   const roles = await loadUserRoles(row.uid as number);
   return rowToUserData(row, roles);

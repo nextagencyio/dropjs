@@ -161,53 +161,48 @@ async function doInit(): Promise<void> {
     await loadEntityTypesFromDir(entityTypesDir);
   }
 
-  // Initialize auth tables and default roles
-  await ensureAuthTables();
-  await seedDefaultRoles();
-
-  // Initialize config table (for themes, modules, site settings, etc.)
-  await ensureConfigTable();
-
-  // Ensure Drupal-compatible config, cache tables, key_value entries
-  await ensureDrupalCompat();
-
-  // Ensure file table
-  await ensureFileTable();
-
-  // Register entity types
+  // Register in-memory entity types and hooks (sync, no DB)
   registerCommentEntityType();
-
-  // Register media entity type and default bundles
-  await registerMediaBundles();
-
-  // Register default blocks
   registerDefaultBlocks();
-
-  // Register event hooks
   registerAliasHooks();
   registerWebhookHooks();
   registerSearchHooks();
   registerCacheHooks();
   registerValidationHooks();
 
-  // Install Web services modules (graphql, jsonapi, graphql_compose)
-  await installModule(graphqlModule);
-  await installModule(jsonapiModule);
-  await installModule(graphqlComposeModule);
+  // Run all table creation in parallel — these are all CREATE TABLE IF NOT EXISTS
+  await Promise.all([
+    ensureAuthTables(),
+    ensureConfigTable(),
+    ensureDrupalCompat(),
+    ensureFileTable(),
+    registerMediaBundles(),
+    ensureSearchIndex(),
+    ensureFloodTable(),
+    ensureUrlAliasTable(),
+    ensureSubsystemTables(),
+  ]);
 
-  // Initialize FTS5 search index
-  await ensureSearchIndex();
+  // Seed defaults (depends on tables above existing)
+  await Promise.all([
+    seedDefaultRoles(),
+    seedDefaultWorkflow(),
+    (async () => {
+      for (const view of getDefaultViews()) {
+        const existing = await loadView(view.id);
+        if (!existing) {
+          await saveView(view);
+        }
+      }
+    })(),
+  ]);
 
-  // Seed default views (only if they don't already exist)
-  for (const view of getDefaultViews()) {
-    const existing = await loadView(view.id);
-    if (!existing) {
-      await saveView(view);
-    }
-  }
-
-  // Seed default workflow
-  await seedDefaultWorkflow();
+  // Install Web services modules
+  await Promise.all([
+    installModule(graphqlModule),
+    installModule(jsonapiModule),
+    installModule(graphqlComposeModule),
+  ]);
 
   // Start background tasks (skip in test mode and serverless environments)
   if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
@@ -218,12 +213,6 @@ async function doInit(): Promise<void> {
     startCron();
     startQueueProcessor();
   }
-
-  // Ensure flood table (Drupal-compatible rate limiting)
-  await ensureFloodTable();
-
-  // Ensure URL alias table
-  await ensureUrlAliasTable();
 
   // Configure uploads directory (use /tmp on read-only filesystems like Vercel)
   const defaultUploadsDir = process.env.VERCEL ? '/tmp/data/files' : 'data/files';
@@ -236,9 +225,6 @@ async function doInit(): Promise<void> {
   } catch {
     // Read-only filesystem — uploads will fail but API still works
   }
-
-  // Ensure subsystem tables (previously only ran on first API request)
-  await ensureSubsystemTables();
 
   g.__dropjs_initialized = true;
 }

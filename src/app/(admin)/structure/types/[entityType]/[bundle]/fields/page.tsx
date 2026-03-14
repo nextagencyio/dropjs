@@ -84,8 +84,8 @@ export default async function ContentTypeFieldsPage({
         {definition.description && ` -- ${definition.description}`}
       </p>
 
-      <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
           <thead>
             <tr className="bg-gin-bg-layer2 border-b border-gin-border-table">
               <th className="w-16 px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">Order</th>

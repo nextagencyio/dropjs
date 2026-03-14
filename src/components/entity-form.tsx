@@ -168,9 +168,9 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
         </div>
       )}
 
-      <div className="flex gap-8 items-start mt-6">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start mt-6">
         {/* Main content area */}
-        <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex-1 min-w-0 w-full space-y-1">
           {/* Title field */}
           <div className="mb-6">
             <label htmlFor="title" className="block text-[13px] font-semibold text-gin-text-light mb-1.5 uppercase tracking-wider">
@@ -200,7 +200,7 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
         </div>
 
         {/* Sidebar -- meta panel */}
-        <div className="w-72 shrink-0">
+        <div className="w-full lg:w-72 shrink-0">
           <div className="sticky top-20 bg-white border border-gin-border rounded-gin overflow-hidden shadow-sm">
             <div className="px-4 py-3 bg-gin-bg-layer2 border-b border-gin-border">
               <h3 className="text-[13px] font-semibold uppercase tracking-wider text-gin-text-light">

@@ -43,8 +43,8 @@ export function DataTable<T extends object>({
 
   return (
     <div>
-      <div className="bg-white rounded-gin border border-gin-border overflow-hidden shadow-sm">
-        <table className="w-full border-collapse">
+      <div className="bg-white rounded-gin border border-gin-border overflow-x-auto shadow-sm">
+        <table className="w-full border-collapse min-w-[500px]">
           <thead>
             <tr>
               {columns.map((col) => (

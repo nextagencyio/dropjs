@@ -39,8 +39,8 @@ export default async function TopPagesPage({
           No page views recorded for this period.
         </div>
       ) : (
-        <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">
+          <table className="w-full text-sm min-w-[500px]">
             <thead>
               <tr className="border-b border-gin-border-table bg-gin-bg-layer2">
                 <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-8">

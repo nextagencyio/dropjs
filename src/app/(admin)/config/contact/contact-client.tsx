@@ -427,8 +427,8 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
             </div>
           )}
 
-          <div className="bg-white rounded-gin-l border border-gin-border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-gin-l border border-gin-border overflow-x-auto">
+            <table className="w-full min-w-[500px] text-sm">
               <thead className="bg-gin-bg-layer2 border-b border-gin-border-table">
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gin-text-light text-[13px] uppercase tracking-wider">Label</th>
@@ -485,8 +485,8 @@ export default function ContactClient({ initialForms, initialMessages }: Contact
       )}
 
       {activeTab === 'messages' && (
-        <div className="bg-white rounded-gin-l border border-gin-border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-gin-l border border-gin-border overflow-x-auto">
+          <table className="w-full min-w-[500px] text-sm">
             <thead className="bg-gin-bg-layer2 border-b border-gin-border-table">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-gin-text-light text-[13px] uppercase tracking-wider">Date</th>

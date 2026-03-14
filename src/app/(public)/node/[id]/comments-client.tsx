@@ -30,7 +30,7 @@ function formatDate(timestamp: number): string {
 
 function CommentItem({ comment }: { comment: Comment }) {
   const depth = (comment.thread?.match(/\./g) || []).length;
-  const marginLeft = Math.min(depth, 4) * 24;
+  const marginLeft = Math.min(depth, 4) * 16;
 
   return (
     <div className="border-b border-gray-100 py-4" style={{ marginLeft }}>

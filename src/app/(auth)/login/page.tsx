@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-[420px]">
-      <div className="bg-gin-bg-layer rounded-gin-l p-10 border border-gin-border/60 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+      <div className="bg-gin-bg-layer rounded-gin-l p-6 sm:p-10 border border-gin-border/60 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
         <div className="text-center mb-9">
           <div className="inline-flex items-center justify-center mb-5">
             <Image src="/logo.png" alt="drop.js" width={72} height={99} className="drop-shadow-sm" priority />

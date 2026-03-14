@@ -74,8 +74,8 @@ export default async function BlockListPage() {
       {allRegions.map((region) => (
         <div key={region.id} className="mb-6">
           <h2 className="text-base font-semibold text-gin-title mb-2">{region.label}</h2>
-          <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">
+            <table className="w-full min-w-[500px] text-sm">
               <thead>
                 <tr className="bg-gin-bg-layer2 border-b border-gin-border-table">
                   <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">Block</th>

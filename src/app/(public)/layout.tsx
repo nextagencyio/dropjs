@@ -35,9 +35,9 @@ export default async function PublicLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div>
-            <Link href="/front" className="text-2xl font-bold text-gray-900 no-underline hover:text-gin-primary">
+            <Link href="/front" className="text-xl sm:text-2xl font-bold text-gray-900 no-underline hover:text-gin-primary">
               {siteName}
             </Link>
             {config?.slogan && (
@@ -52,12 +52,12 @@ export default async function PublicLayout({ children }: { children: React.React
 
       <PublicNav links={navLinks} />
 
-      <main className="flex-1 max-w-5xl mx-auto px-6 py-8 w-full">
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full">
         {children}
       </main>
 
       <footer className="border-t border-gray-200 bg-gray-50 mt-auto">
-        <div className="max-w-5xl mx-auto px-6 py-6 text-center text-sm text-gray-500">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 text-center text-sm text-gray-500">
           <p>&copy; {new Date().getFullYear()} {siteName}. Powered by drop.js</p>
         </div>
       </footer>

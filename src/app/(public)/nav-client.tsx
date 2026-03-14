@@ -27,7 +27,7 @@ export function PublicNav({ links }: { links: { href: string; label: string }[] 
 
   return (
     <nav className="bg-gray-50 border-b border-gray-200">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 overflow-x-auto">
         <ul className="flex gap-0 list-none m-0 p-0">
           {links.map((link) => {
             const active = pathname === link.href;

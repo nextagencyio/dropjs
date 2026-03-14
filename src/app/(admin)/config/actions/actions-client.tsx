@@ -220,8 +220,8 @@ export default function ActionsClient() {
           Object.entries(actionsByCategory).map(([category, categoryActions]) => (
             <div key={category} className="mb-5">
               <h2 className="text-lg font-semibold text-gin-title mb-2 capitalize">{category}</h2>
-              <div className="bg-white rounded-gin-l border border-gin-border overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="bg-white rounded-gin-l border border-gin-border overflow-x-auto">
+                <table className="w-full min-w-[500px] text-sm">
                   <thead className="bg-gin-bg-layer2 border-b border-gin-border-table">
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold text-gin-text-light text-[13px] uppercase tracking-wider">Label</th>
@@ -364,8 +364,8 @@ export default function ActionsClient() {
           </form>
         )}
 
-        <div className="bg-white rounded-gin-l border border-gin-border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-gin-l border border-gin-border overflow-x-auto">
+          <table className="w-full min-w-[500px] text-sm">
             <thead className="bg-gin-bg-layer2 border-b border-gin-border-table">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-gin-text-light text-[13px] uppercase tracking-wider">Label</th>

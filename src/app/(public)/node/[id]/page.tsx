@@ -83,8 +83,8 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
   return (
     <article>
       <header className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{node.title}</h1>
-        <div className="flex items-center gap-3 text-sm text-gray-500">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{node.title}</h1>
+        <div className="flex items-center gap-2 sm:gap-3 text-sm text-gray-500 flex-wrap">
           {author && (
             <span>
               By{' '}
@@ -108,7 +108,7 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
           <img
             src={imageUrl}
             alt={node.field_image?.alt || node.title}
-            className="w-full max-h-[500px] object-cover rounded"
+            className="w-full max-h-[300px] sm:max-h-[500px] object-cover rounded"
           />
           {node.field_image?.alt && (
             <figcaption className="text-sm text-gray-500 mt-2">{node.field_image.alt}</figcaption>

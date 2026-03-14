@@ -99,7 +99,7 @@ function FileDetailModal({ file, onClose, onDelete }: {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={onClose}>
       <div
-        className="bg-white rounded-gin-l shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-gin-l shadow-xl max-w-2xl w-full mx-3 sm:mx-4 max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -111,7 +111,7 @@ function FileDetailModal({ file, onClose, onDelete }: {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           {/* Preview */}
           <div className="mb-6">
             {isImage(file.filemime) ? (
@@ -131,7 +131,7 @@ function FileDetailModal({ file, onClose, onDelete }: {
 
           {/* Metadata */}
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-[11px] font-bold text-gin-text-light uppercase tracking-wide">File Name</label>
                 <p className="text-sm text-gin-title mt-1 break-all">{file.filename}</p>

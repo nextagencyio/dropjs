@@ -60,8 +60,8 @@ export default async function FieldGroupsPage({
       </div>
 
       {/* Field groups table */}
-      <div className="bg-white border border-gin-border rounded-gin overflow-hidden mb-6">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-gin-border rounded-gin overflow-x-auto mb-6">
+        <table className="w-full min-w-[500px] text-sm">
           <thead>
             <tr className="bg-gin-bg-layer2 border-b border-gin-border-table">
               <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">Label</th>
@@ -121,8 +121,8 @@ export default async function FieldGroupsPage({
           <p className="text-gin-text-light text-sm mb-3">
             Current field arrangement showing group assignments.
           </p>
-          <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">
+            <table className="w-full min-w-[500px] text-sm">
               <thead>
                 <tr className="bg-gin-bg-layer2 border-b border-gin-border-table">
                   <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">Field</th>

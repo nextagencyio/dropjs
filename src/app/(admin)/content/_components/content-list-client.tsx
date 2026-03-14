@@ -155,7 +155,7 @@ export default function ContentListClient({ types, entities: initialEntities, to
       </div>
 
       {/* Filters bar */}
-      <div className="bg-white border border-gin-border rounded-t-gin px-4 py-3 flex items-center gap-3 flex-wrap">
+      <div className="bg-white border border-gin-border rounded-t-gin px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 flex-wrap">
         <div className="relative">
           <label htmlFor="search" className="sr-only">Title</label>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gin-text-light pointer-events-none" />
@@ -166,7 +166,7 @@ export default function ContentListClient({ types, entities: initialEntities, to
             onChange={(e) => setParam('search', e.target.value)}
             placeholder="Filter by title..."
             style={{ paddingLeft: '2.25rem' }}
-            className="border border-gin-border-form rounded-gin-s pr-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-1 focus:ring-gin-primary focus:border-gin-primary transition-colors"
+            className="border border-gin-border-form rounded-gin-s pr-3 py-1.5 text-sm w-full sm:w-56 focus:outline-none focus:ring-1 focus:ring-gin-primary focus:border-gin-primary transition-colors"
           />
         </div>
         <div>
@@ -236,8 +236,8 @@ export default function ContentListClient({ types, entities: initialEntities, to
         </div>
       ) : (
         <>
-          <div className="bg-white border border-t-0 border-gin-border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white border border-t-0 border-gin-border overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b-2 border-gin-border-table-header bg-gin-bg-layer2">
                   <th className="w-10 px-4 py-3 text-left">

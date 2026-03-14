@@ -52,8 +52,8 @@ export function AdminShell({
 
       <div className="ml-16 min-h-screen flex flex-col">
         {/* Secondary top bar */}
-        <header className="sticky top-0 z-40 flex items-center justify-between h-[52px] bg-white/95 backdrop-blur-sm border-b border-gin-border px-6 shadow-sm">
-          <nav className="flex items-center gap-1.5 text-sm">
+        <header className="sticky top-0 z-40 flex items-center justify-between h-[52px] bg-white/95 backdrop-blur-sm border-b border-gin-border px-3 sm:px-6 shadow-sm">
+          <nav className="flex items-center gap-1 sm:gap-1.5 text-sm min-w-0 overflow-hidden">
             {breadcrumbs.map((crumb, i) => (
               <span key={crumb.href} className="flex items-center gap-1.5">
                 {i > 0 && (
@@ -73,19 +73,19 @@ export function AdminShell({
             ))}
           </nav>
 
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-4 text-sm shrink-0">
             <a
               href="/"
               target="_blank"
               className="inline-flex items-center gap-1.5 text-gin-primary hover:text-gin-primary-hover font-medium transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
-              Back to site
+              <span className="hidden sm:inline">Back to site</span>
             </a>
           </div>
         </header>
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-3 sm:p-6">
           {children}
         </main>
       </div>

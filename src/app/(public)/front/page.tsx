@@ -41,13 +41,13 @@ function NodeCard({ node }: { node: PublishedNode }) {
 
   return (
     <article className="border-b border-gray-200 pb-6 mb-6 last:border-0">
-      <div className={hasImage ? 'flex gap-6' : ''}>
+      <div className={hasImage ? 'flex flex-col sm:flex-row gap-4 sm:gap-6' : ''}>
         {hasImage && (
           <Link href={`/node/${node.nid}`} className="flex-shrink-0">
             <img
               src={node.field_image!.medium_url || node.field_image!.url}
               alt={node.field_image!.alt || node.title}
-              className="w-48 h-32 object-cover rounded"
+              className="w-full sm:w-48 h-48 sm:h-32 object-cover rounded"
               loading="lazy"
             />
           </Link>

@@ -61,13 +61,13 @@ function NodeCard({ node }: { node: NodeTeaser }) {
 
   return (
     <article className="border-b border-gray-200 pb-6 mb-6 last:border-0">
-      <div className={hasImage ? 'flex gap-6' : ''}>
+      <div className={hasImage ? 'flex flex-col sm:flex-row gap-4 sm:gap-6' : ''}>
         {hasImage && (
           <Link href={`/node/${node.nid}`} className="flex-shrink-0">
             <img
               src={node.field_image!.medium_url || node.field_image!.url}
               alt={node.field_image!.alt || node.title}
-              className="w-48 h-32 object-cover rounded"
+              className="w-full sm:w-48 h-48 sm:h-32 object-cover rounded"
               loading="lazy"
             />
           </Link>
@@ -137,12 +137,12 @@ export default async function UserProfilePage({ params }: { params: Promise<{ ui
   return (
     <div>
       <header className="mb-8 pb-6 border-b border-gray-200">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gin-primary/10 flex items-center justify-center text-2xl font-bold text-gin-primary">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gin-primary/10 flex items-center justify-center text-xl sm:text-2xl font-bold text-gin-primary">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{user.name}</h1>
             <p className="text-sm text-gray-500 mt-1">
               Member since {formatIsoDate(user.created)}
             </p>

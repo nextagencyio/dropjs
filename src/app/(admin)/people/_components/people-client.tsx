@@ -62,8 +62,8 @@ export function PeopleActions({
           No users found.
         </div>
       ) : (
-        <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-gin-border-table bg-gin-bg-layer2">
                 <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">
@@ -250,13 +250,13 @@ function UserFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-gin-l shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto mx-4">
-        <div className="px-6 py-4 border-b border-gin-border">
+      <div className="bg-white rounded-gin-l shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto mx-3 sm:mx-4">
+        <div className="px-4 sm:px-6 py-4 border-b border-gin-border">
           <h2 className="text-lg font-semibold text-gin-title">
             {isEdit ? 'Edit User' : 'Create User'}
           </h2>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           {error && (
             <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-gin-s border border-red-200">
               {error}

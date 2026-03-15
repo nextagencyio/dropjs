@@ -22,7 +22,7 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **CORS** — Configurable cross-origin resource sharing with credential support and preflight handling
 - **Input sanitization** — Server-side HTML purification stripping XSS vectors (scripts, event handlers, javascript: URLs) while preserving safe markup
 - **Cache system** — In-memory cache with Drupal-style tag-based invalidation, named bins, entity/config cache wiring with automatic invalidation on CRUD
-- **Admin UI** — Full React admin panel covering content, structure, views, menus, blocks, comments, appearance/themes, configuration, webhooks, languages, layout builder, URL patterns (pathauto), reports, media, user management, registration, password reset, content preview, REST resource management, actions/triggers, contact forms, and shortcuts
+- **Admin UI** — Full Next.js 15 admin panel (React 19, App Router, Server Components + Server Actions) covering content, structure, views, menus, blocks, comments, appearance/themes, configuration, webhooks, languages, layout builder, URL patterns (pathauto), reports, media, user management, registration, password reset, content preview, REST resource management, actions/triggers, contact forms, and shortcuts
 - **Menu system** — Hierarchical navigation menus with drag-and-drop ordering, config-based storage
 - **Cron scheduler** — Tick-based job scheduler with EventBus integration and admin API
 - **Webhook system** — HTTP webhooks for entity lifecycle and system events with HMAC signing
@@ -51,12 +51,12 @@ Drupal's entity/field architecture is powerful — but it's PHP, heavy, and hard
 - **Token replacement** — `[type:name]` token system with 6 built-in types (node, user, site, date, current-date, random) for dynamic text substitution
 - **Mail system** — SMTP email via nodemailer with console fallback, pluggable template registry (password reset, contact notifications, registration)
 - **Session signing** — HMAC-SHA256 signed session tokens with configurable secret
-- **SSR public frontend** — Server-rendered pages (Next.js server components) with SEO metadata, OpenGraph tags, pagination, user profiles, RSS feed, sitemap, and 404 page
+- **SSR public frontend** — Server-rendered pages (Next.js 15 server components) with SEO metadata, OpenGraph tags, ISR caching, pagination, user profiles, RSS feed, sitemap, error/loading boundaries, and 404 page
 - **CI pipeline** — GitHub Actions with type checking, unit tests (Vitest), and E2E tests (Playwright)
 - **Authentication** — Users, roles, 21 permissions, entity-level access control, sessions, CSRF protection, rate limiting, registration, and password reset
 - **Drupal migration** — Read a Drupal database and migrate content directly
-- **E2E tested** — 378+ Playwright tests across 42 specs covering the full stack
-- **Unit tested** — 277 Vitest tests across 12 files
+- **E2E tested** — 382+ Playwright tests across 42 specs covering the full stack
+- **Unit tested** — 197 Vitest tests across 12 files
 - **Search API** — Native full-text search (SQLite FTS5, PostgreSQL tsvector/tsquery) with porter stemming across all entity types
 - **Rate limiting** — In-memory sliding window rate limiter (5/min auth, 30/min mutations, 100/min reads) with `X-RateLimit-*` headers
 - **HTTP caching** — `Cache-Control`, `ETag`, `Last-Modified` headers on file serving; CDN-friendly `s-maxage` + `stale-while-revalidate` for public API responses
@@ -86,17 +86,21 @@ npm run dev
 
 ```
 src/
+├── app/          Next.js App Router — admin UI, SSR public frontend, API catch-all route
+│   ├── (admin)/  Server Components (data) + Client Components (forms) + Server Actions
+│   ├── (public)/ SSR pages with ISR caching, error/loading boundaries, server actions
+│   ├── (auth)/   Login, registration, password reset
+│   └── api/      Catch-all route bridging Web API to Node.js request handler
 ├── api/          REST API, request handling, middleware, OpenAPI, GraphQL
 ├── auth/         Users, roles, permissions, sessions, CSRF, rate limiting
 ├── cli/          CLI commands (dev, serve, migrate)
+├── components/   Shared UI components (field widgets, data table, rich text editor)
 ├── core/         Entity system, config, event bus, cron, Views, cache, mail, Drupal compat
 ├── db/           Database abstraction (Knex — SQLite, PostgreSQL), schema management
 ├── field/        18 field type definitions, storage engine with revision tables
+├── lib/          Server-side data layer (server-only), auth helpers, media upload
 ├── modules/      Drupal-style modules (GraphQL, JSON:API, GraphQL Compose)
-├── migrate/      Drupal-to-drop.js migration tools
-├── app/          Next.js admin UI + SSR public frontend (React 19, App Router)
-├── components/   Admin UI + public frontend components
-└── lib/          Server-side data layer, auth helpers, media upload
+└── migrate/      Drupal-to-drop.js migration tools
 ```
 
 ## Web Services
@@ -312,7 +316,7 @@ Rate limits: 5 req/min for auth, 30 req/min for mutations, 100 req/min for reads
 
 ## Admin UI
 
-The React admin panel (Next.js 15 / React 19) provides a full management interface at `/admin`:
+The admin panel (Next.js 15 / React 19, Server Components + Server Actions) provides a full management interface:
 
 ### Content Management
 - **Dashboard** — Overview with recent activity
@@ -558,10 +562,10 @@ CI runs type checking, unit tests, and E2E tests on every push and PR via GitHub
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                  Applications                    │
-│       (Next.js Admin UI, API consumers)          │
+│            Next.js 15 (App Router)               │
+│  Admin UI · SSR Public Frontend · API Bridge     │
 ├─────────────────────────────────────────────────┤
-│            src/api (Custom HTTP)                  │
+│            src/api (Request Handler)              │
 │  REST · OpenAPI · GraphQL · CSRF · Rate Limit    │
 ├─────────────────────────────────────────────────┤
 │              src/modules                          │

@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { postCommentAction } from '../../_actions/comments';
 
 interface Comment {
   cid: number;
   entity_type: string;
   entity_id: number;
   uid: number;
-  subject: string;
+  subject: string | null;
   comment_body: string;
   created: number;
   status: number;
@@ -50,12 +52,13 @@ function CommentItem({ comment }: { comment: Comment }) {
   );
 }
 
-function CommentForm({ nodeId, onCommentAdded }: { nodeId: number; onCommentAdded: () => void }) {
+function CommentForm({ nodeId }: { nodeId: number }) {
   const { user } = useAuth();
+  const router = useRouter();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   if (!user) {
     return (
@@ -69,31 +72,17 @@ function CommentForm({ nodeId, onCommentAdded }: { nodeId: number; onCommentAdde
     e.preventDefault();
     if (!body.trim()) return;
 
-    setSubmitting(true);
     setError(null);
-    try {
-      const res = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entity_type: 'node',
-          entity_id: nodeId,
-          subject: subject.trim(),
-          comment_body: body.trim(),
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error?.message || 'Failed to post comment');
+    startTransition(async () => {
+      const result = await postCommentAction(nodeId, subject.trim(), body.trim());
+      if (result.success) {
+        setSubject('');
+        setBody('');
+        router.refresh();
+      } else {
+        setError(result.error || 'Failed to post comment');
       }
-      setSubject('');
-      setBody('');
-      onCommentAdded();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -116,33 +105,17 @@ function CommentForm({ nodeId, onCommentAdded }: { nodeId: number; onCommentAdde
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"
-        disabled={submitting || !body.trim()}
+        disabled={isPending || !body.trim()}
         className="px-4 py-2 bg-gin-primary text-white text-sm rounded hover:opacity-90 disabled:opacity-50"
       >
-        {submitting ? 'Posting...' : 'Post comment'}
+        {isPending ? 'Posting...' : 'Post comment'}
       </button>
     </form>
   );
 }
 
-export function CommentsSection({ nodeId }: { nodeId: number }) {
-  const [comments, setComments] = useState<Comment[]>([]);
-
-  const loadComments = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/comments?entity_type=node&entity_id=${nodeId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setComments(data.data || []);
-      }
-    } catch {
-      // Comments are non-critical
-    }
-  }, [nodeId]);
-
-  useEffect(() => {
-    loadComments();
-  }, [loadComments]);
+export function CommentsSection({ nodeId, initialComments }: { nodeId: number; initialComments: Comment[] }) {
+  const comments = initialComments;
 
   return (
     <section className="mt-10 pt-6 border-t border-gray-200">
@@ -161,7 +134,7 @@ export function CommentsSection({ nodeId }: { nodeId: number }) {
       )}
 
       <h3 className="text-sm font-medium text-gray-700 mb-3">Add a comment</h3>
-      <CommentForm nodeId={nodeId} onCommentAdded={loadComments} />
+      <CommentForm nodeId={nodeId} />
     </section>
   );
 }

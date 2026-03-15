@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { loadEntity, getNodesByTag, type EntityData } from '@/lib/server/data';
 import Pager from '@/components/pager';
 
+export const revalidate = 300;
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
 }

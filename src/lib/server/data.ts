@@ -1080,5 +1080,69 @@ export async function getMainMenu(): Promise<{ tree: MenuTreeItemData[]; items: 
   return { tree: detail.tree, items: detail.items };
 }
 
+// ── Comments ────────────────────────────────────────────────────────
+
+export interface CommentSummary {
+  cid: number;
+  entity_type: string;
+  entity_id: number;
+  uid: number;
+  subject: string | null;
+  comment_body: string;
+  created: number;
+  status: number;
+  pid: number | null;
+  thread: string;
+  author_name?: string;
+}
+
+export async function getComments(entityType: string, entityId: number): Promise<CommentSummary[]> {
+  await ensureInitialized();
+  const { loadComments } = await import('../../core/comments');
+  const comments = await loadComments(entityType, entityId, { status: 1 });
+  return comments.map((c) => ({
+    cid: c.cid,
+    entity_type: c.entity_type,
+    entity_id: c.entity_id,
+    uid: c.uid,
+    subject: c.subject,
+    comment_body: (c as any).comment_body ?? '',
+    created: c.created,
+    status: c.status,
+    pid: c.parent_cid > 0 ? c.parent_cid : null,
+    thread: c.thread,
+    author_name: c.name ?? undefined,
+  }));
+}
+
+// ── Search ──────────────────────────────────────────────────────────
+
+export interface SearchResultItem {
+  entity_type: string;
+  bundle: string;
+  id: number;
+  title: string;
+  status: boolean;
+  changed: number;
+}
+
+export async function searchContent(query: string, limit: number = 50): Promise<{ data: SearchResultItem[]; meta: { query: string; total: number; engine: string } }> {
+  await ensureInitialized();
+  const { searchIndex, getActiveSearchBackend } = await import('../../core/search');
+  const results = await searchIndex(query, { limit });
+  const data: SearchResultItem[] = results.map((r) => ({
+    entity_type: r.entity_type,
+    bundle: r.bundle,
+    id: r.entity_id,
+    title: r.title,
+    status: true,
+    changed: 0,
+  }));
+  return {
+    data,
+    meta: { query, total: data.length, engine: getActiveSearchBackend() },
+  };
+}
+
 // Re-export types for convenience
 export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig };

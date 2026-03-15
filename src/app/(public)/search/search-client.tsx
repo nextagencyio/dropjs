@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { searchAction } from '../_actions/search';
 
 interface SearchResult {
   entity_type: string;
@@ -13,9 +14,10 @@ interface SearchResult {
   changed: number;
 }
 
-interface SearchResponse {
-  data: SearchResult[];
-  meta: { query: string; total: number; engine: string };
+interface SearchMeta {
+  query: string;
+  total: number;
+  engine: string;
 }
 
 function resultUrl(result: SearchResult): string {
@@ -30,9 +32,9 @@ export function SearchClient() {
   const initialQuery = searchParams.get('q') || '';
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [meta, setMeta] = useState<SearchResponse['meta'] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [meta, setMeta] = useState<SearchMeta | null>(null);
   const [searched, setSearched] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (initialQuery.length >= 2) {
@@ -40,25 +42,14 @@ export function SearchClient() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function performSearch(q: string) {
+  function performSearch(q: string) {
     if (q.length < 2) return;
-    setLoading(true);
     setSearched(true);
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=50`);
-      if (res.ok) {
-        const data: SearchResponse = await res.json();
-        setResults(data.data || []);
-        setMeta(data.meta);
-      } else {
-        setResults([]);
-        setMeta(null);
-      }
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
+    startTransition(async () => {
+      const response = await searchAction(q, 50);
+      setResults(response.data || []);
+      setMeta(response.meta);
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -86,21 +77,21 @@ export function SearchClient() {
           />
           <button
             type="submit"
-            disabled={loading || query.trim().length < 2}
+            disabled={isPending || query.trim().length < 2}
             className="px-6 py-2 bg-gin-primary text-white text-sm rounded hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? 'Searching...' : 'Search'}
+            {isPending ? 'Searching...' : 'Search'}
           </button>
         </div>
       </form>
 
-      {loading && (
+      {isPending && (
         <div className="flex items-center justify-center py-12">
           <div className="w-6 h-6 border-2 border-gin-primary border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {!loading && searched && (
+      {!isPending && searched && (
         <div>
           {meta && (
             <p className="text-sm text-gray-500 mb-4">
@@ -130,7 +121,7 @@ export function SearchClient() {
         </div>
       )}
 
-      {!searched && !loading && (
+      {!searched && !isPending && (
         <p className="text-gray-500 text-sm">Enter a search term to find content.</p>
       )}
     </div>

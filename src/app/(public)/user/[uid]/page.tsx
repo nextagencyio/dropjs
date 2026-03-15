@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getUserProfile, listEntities } from '@/lib/server/data';
 
+export const revalidate = 300;
+
 interface NodeTeaser {
   nid: number;
   type: string;

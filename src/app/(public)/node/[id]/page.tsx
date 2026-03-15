@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { loadEntity, getUserProfile } from '@/lib/server/data';
+import { loadEntity, getUserProfile, getComments } from '@/lib/server/data';
 import { CommentsSection } from './comments-client';
 import { EditLink } from './edit-link';
+
+export const revalidate = 300;
 
 interface NodeFull {
   nid: number;
@@ -138,7 +140,7 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
         </footer>
       )}
 
-      <CommentsSection nodeId={node.nid} />
+      <CommentsSection nodeId={node.nid} initialComments={await getComments('node', node.nid)} />
     </article>
   );
 }

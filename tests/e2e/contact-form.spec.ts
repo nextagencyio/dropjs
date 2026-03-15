@@ -1,4 +1,4 @@
-import { test, expect, apiPost, apiGet, apiDelete } from './fixtures';
+import { test, expect, apiPost, apiGet, apiPatch, apiDelete } from './fixtures';
 
 test.describe('Contact Form API', () => {
   const testFormName = 'e2e_test_contact';
@@ -121,10 +121,7 @@ test.describe('Contact Form API', () => {
     const messageId = submitBody.data.id;
 
     // Update status to 'read'
-    const patchResp = await page.request.patch(`/api/contact/messages/${messageId}`, {
-      data: { status: 'read' },
-      headers: { Authorization: `Bearer ${await getToken(page)}` },
-    });
+    const patchResp = await apiPatch(page, `/api/contact/messages/${messageId}`, { status: 'read' });
     expect(patchResp.ok()).toBeTruthy();
     const patchBody = await patchResp.json();
     expect(patchBody.data.status).toBe('read');
@@ -157,12 +154,3 @@ test.describe('Contact Form API', () => {
     expect(resp.status()).toBe(404);
   });
 });
-
-// Helper to get auth token for direct request calls
-async function getToken(page: any): Promise<string> {
-  const resp = await page.request.post('/api/auth/login', {
-    data: { name: 'admin', password: 'DropJs2024Admin' },
-  });
-  const body = await resp.json();
-  return body.data.token;
-}

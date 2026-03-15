@@ -38,6 +38,22 @@ export function authenticate() {
         }
       }
     }
+
+    // Fall back to next-auth session (passed via internal header from catch-all route)
+    if (!req.isAuthenticated) {
+      const nextAuthUid = req.headers['x-nextauth-uid'];
+      if (typeof nextAuthUid === 'string') {
+        const uid = parseInt(nextAuthUid, 10);
+        if (!isNaN(uid)) {
+          const user = await loadUser(uid);
+          if (user && user.status !== false) {
+            req.user = user;
+            req.isAuthenticated = true;
+          }
+        }
+      }
+    }
+
     next();
   };
 }

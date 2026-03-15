@@ -9,6 +9,7 @@
 import { IncomingMessage, ServerResponse } from 'node:http';
 import { Socket } from 'node:net';
 import { handleApiRequest } from '@/api/request-handler.js';
+import { auth } from '../../../../auth';
 
 /** Convert a Web API Request into a Node.js IncomingMessage-like object. */
 function toIncomingMessage(request: Request, slug: string[], bodyBuffer: Buffer): IncomingMessage {
@@ -124,6 +125,14 @@ async function handler(request: Request, context: { params: Promise<{ slug: stri
   }
 
   const req = toIncomingMessage(request, slug, bodyBuffer);
+
+  // Resolve next-auth session and pass uid as internal header
+  // so the authenticate() middleware can load the user from cookies
+  const session = await auth();
+  if (session?.user?.uid) {
+    (req as any).headers['x-nextauth-uid'] = String(session.user.uid);
+  }
+
   const { res, promise } = collectResponse();
 
   await handleApiRequest(req, res);

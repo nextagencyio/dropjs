@@ -1,13 +1,13 @@
 import { test, expect, apiPost, apiGet, apiDelete } from './fixtures';
 
 test.describe('JSON:API Output Format', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ authenticatedPage: page }) => {
     await apiPost(page, '/api/entity-types', {
       entity_type: 'node', bundle: 'article', label: 'Article',
     }).catch(() => {});
   });
 
-  test('should return JSON:API format with Accept header', async ({ page }) => {
+  test('should return JSON:API format with Accept header', async ({ authenticatedPage: page }) => {
     // Create an article
     const createRes = await apiPost(page, '/api/node/article', {
       title: 'JSON:API Test Article',
@@ -17,13 +17,8 @@ test.describe('JSON:API Output Format', () => {
     const nid = created.nid;
 
     // Fetch with JSON:API Accept header
-    const token = await page.request.post('/api/auth/login', {
-      data: { name: 'admin', password: 'DropJs2024Admin' },
-    }).then(r => r.json()).then(b => b.data.token);
-
     const res = await page.request.get(`/api/node/article/${nid}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.api+json',
       },
     });
@@ -41,7 +36,7 @@ test.describe('JSON:API Output Format', () => {
     await apiDelete(page, `/api/node/article/${nid}`);
   });
 
-  test('should return JSON:API format with ?format=jsonapi query param', async ({ page }) => {
+  test('should return JSON:API format with ?format=jsonapi query param', async ({ authenticatedPage: page }) => {
     const createRes = await apiPost(page, '/api/node/article', {
       title: 'JSON:API Query Param Test',
       status: true,
@@ -61,7 +56,7 @@ test.describe('JSON:API Output Format', () => {
     await apiDelete(page, `/api/node/article/${nid}`);
   });
 
-  test('should return standard format without JSON:API header', async ({ page }) => {
+  test('should return standard format without JSON:API header', async ({ authenticatedPage: page }) => {
     const createRes = await apiPost(page, '/api/node/article', {
       title: 'Standard Format Test',
       status: true,
@@ -81,7 +76,7 @@ test.describe('JSON:API Output Format', () => {
     await apiDelete(page, `/api/node/article/${nid}`);
   });
 
-  test('should transform list responses to JSON:API format', async ({ page }) => {
+  test('should transform list responses to JSON:API format', async ({ authenticatedPage: page }) => {
     const createRes = await apiPost(page, '/api/node/article', {
       title: 'JSON:API List Test',
       status: true,

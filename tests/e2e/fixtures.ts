@@ -7,6 +7,13 @@ const TEST_USER = {
   password: 'DropJs2024Admin',
 };
 
+// Fetch a CSRF token from the API (sets cookie + returns token for header)
+async function getCsrfToken(page: Page): Promise<string> {
+  const resp = await page.request.get('/api/csrf-token');
+  const body = await resp.json();
+  return body.csrfToken;
+}
+
 export const test = base.extend<{
   authenticatedPage: Page;
   authToken: string;
@@ -40,8 +47,13 @@ export const test = base.extend<{
 
 // Helper function for making authenticated API requests from tests
 // With next-auth, the session cookie is automatically sent via page.request
+// CSRF token is fetched and sent as X-CSRF-Token header for mutating requests
 export async function apiPost(page: Page, url: string, data: unknown) {
-  return page.request.post(url, { data });
+  const csrfToken = await getCsrfToken(page);
+  return page.request.post(url, {
+    data,
+    headers: { 'x-csrf-token': csrfToken },
+  });
 }
 
 export async function apiGet(page: Page, url: string) {
@@ -49,15 +61,26 @@ export async function apiGet(page: Page, url: string) {
 }
 
 export async function apiPatch(page: Page, url: string, data: unknown) {
-  return page.request.patch(url, { data });
+  const csrfToken = await getCsrfToken(page);
+  return page.request.patch(url, {
+    data,
+    headers: { 'x-csrf-token': csrfToken },
+  });
 }
 
 export async function apiPut(page: Page, url: string, data: unknown) {
-  return page.request.put(url, { data });
+  const csrfToken = await getCsrfToken(page);
+  return page.request.put(url, {
+    data,
+    headers: { 'x-csrf-token': csrfToken },
+  });
 }
 
 export async function apiDelete(page: Page, url: string) {
-  return page.request.delete(url);
+  const csrfToken = await getCsrfToken(page);
+  return page.request.delete(url, {
+    headers: { 'x-csrf-token': csrfToken },
+  });
 }
 
 export { expect };

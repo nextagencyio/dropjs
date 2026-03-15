@@ -1,4 +1,4 @@
-import { test, expect, apiPost, apiGet } from './fixtures';
+import { test, expect, apiPost, apiGet, apiPatch } from './fixtures';
 
 test.describe('Content Revisions', () => {
   // Article content type is seeded by default — no need to create it
@@ -13,24 +13,10 @@ test.describe('Content Revisions', () => {
     const nid = created.nid;
 
     // Edit #1
-    const token = await test.step('get token', async () => {
-      const loginResp = await page.request.post('/api/auth/login', {
-        data: { name: 'admin', password: 'DropJs2024Admin' },
-      });
-      const body = await loginResp.json();
-      return body.data.token;
-    });
-
-    await page.request.patch(`/api/node/article/${nid}`, {
-      data: { title: 'Revision Test Post - Edit 1' },
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiPatch(page, `/api/node/article/${nid}`, { title: 'Revision Test Post - Edit 1' });
 
     // Edit #2
-    await page.request.patch(`/api/node/article/${nid}`, {
-      data: { title: 'Revision Test Post - Edit 2' },
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiPatch(page, `/api/node/article/${nid}`, { title: 'Revision Test Post - Edit 2' });
 
     // Verify revision list shows 3 entries
     const listResp = await apiGet(page, `/api/node/article/${nid}/revisions`);
@@ -52,18 +38,7 @@ test.describe('Content Revisions', () => {
     const originalVid = created.vid;
 
     // Edit to change title
-    const token = await test.step('get token', async () => {
-      const loginResp = await page.request.post('/api/auth/login', {
-        data: { name: 'admin', password: 'DropJs2024Admin' },
-      });
-      const body = await loginResp.json();
-      return body.data.token;
-    });
-
-    await page.request.patch(`/api/node/article/${nid}`, {
-      data: { title: 'Updated Title' },
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiPatch(page, `/api/node/article/${nid}`, { title: 'Updated Title' });
 
     // Load old revision
     const revResp = await apiGet(
@@ -86,18 +61,7 @@ test.describe('Content Revisions', () => {
     const originalVid = created.vid;
 
     // Edit to change title
-    const token = await test.step('get token', async () => {
-      const loginResp = await page.request.post('/api/auth/login', {
-        data: { name: 'admin', password: 'DropJs2024Admin' },
-      });
-      const body = await loginResp.json();
-      return body.data.token;
-    });
-
-    await page.request.patch(`/api/node/article/${nid}`, {
-      data: { title: 'After Edit' },
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiPatch(page, `/api/node/article/${nid}`, { title: 'After Edit' });
 
     // Verify current title is the edited one
     const currentResp = await apiGet(page, `/api/node/article/${nid}`);
@@ -133,18 +97,7 @@ test.describe('Content Revisions', () => {
     const nid = created.nid;
 
     // Edit to get a second revision
-    const token = await test.step('get token', async () => {
-      const loginResp = await page.request.post('/api/auth/login', {
-        data: { name: 'admin', password: 'DropJs2024Admin' },
-      });
-      const body = await loginResp.json();
-      return body.data.token;
-    });
-
-    await page.request.patch(`/api/node/article/${nid}`, {
-      data: { title: 'UI Revision Test - Edited' },
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiPatch(page, `/api/node/article/${nid}`, { title: 'UI Revision Test - Edited' });
 
     // Navigate to revision history page
     await page.goto(`/content/revisions/node/article/${nid}`);
@@ -175,18 +128,7 @@ test.describe('Content Revisions', () => {
     const nid = created.nid;
 
     // Edit to change title
-    const token = await test.step('get token', async () => {
-      const loginResp = await page.request.post('/api/auth/login', {
-        data: { name: 'admin', password: 'DropJs2024Admin' },
-      });
-      const body = await loginResp.json();
-      return body.data.token;
-    });
-
-    await page.request.patch(`/api/node/article/${nid}`, {
-      data: { title: 'Revert UI Test Changed' },
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await apiPatch(page, `/api/node/article/${nid}`, { title: 'Revert UI Test Changed' });
 
     // Navigate to revision history page
     await page.goto(`/content/revisions/node/article/${nid}`);

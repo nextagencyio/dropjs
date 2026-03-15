@@ -8,9 +8,13 @@ import { EditLink } from './edit-link';
 export const revalidate = 300;
 
 export async function generateStaticParams() {
-  const { getPublishedNodes } = await import('@/lib/server/data');
-  const result = await getPublishedNodes({ bundles: ['article', 'page'], limit: 100 });
-  return result.data.map((node: { nid: number }) => ({ id: String(node.nid) }));
+  try {
+    const { getPublishedNodes } = await import('@/lib/server/data');
+    const result = await getPublishedNodes({ bundles: ['article', 'page'], limit: 100 });
+    return result.data.map((node: { nid: number }) => ({ id: String(node.nid) }));
+  } catch {
+    return [];
+  }
 }
 
 interface NodeFull {

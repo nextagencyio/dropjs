@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { getUserProfile, listEntities } from '@/lib/server/data';
 
@@ -65,12 +66,13 @@ function NodeCard({ node }: { node: NodeTeaser }) {
     <article className="border-b border-gray-200 pb-6 mb-6 last:border-0">
       <div className={hasImage ? 'flex flex-col sm:flex-row gap-4 sm:gap-6' : ''}>
         {hasImage && (
-          <Link href={`/node/${node.nid}`} className="flex-shrink-0">
-            <img
-              src={node.field_image!.medium_url || node.field_image!.url}
+          <Link href={`/node/${node.nid}`} className="flex-shrink-0 relative w-full sm:w-48 h-48 sm:h-32">
+            <Image
+              src={node.field_image!.medium_url || node.field_image!.url!}
               alt={node.field_image!.alt || node.title}
-              className="w-full sm:w-48 h-48 sm:h-32 object-cover rounded"
-              loading="lazy"
+              fill
+              sizes="(max-width: 640px) 100vw, 192px"
+              className="object-cover rounded"
             />
           </Link>
         )}

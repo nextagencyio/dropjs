@@ -12,7 +12,7 @@ export default function AuthError({
       <div className="bg-gin-bg-layer rounded-gin-l p-10 border border-gin-border/60 shadow-[0_4px_24px_rgba(0,0,0,0.08)] text-center">
         <h2 className="text-xl font-semibold text-gin-title mb-2">Something went wrong</h2>
         <p className="text-sm text-gin-text-light mb-4">
-          {error.message || 'An unexpected error occurred.'}
+          {process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred.'}
         </p>
         <button
           onClick={reset}

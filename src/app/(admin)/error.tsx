@@ -12,7 +12,7 @@ export default function AdminError({
       <div className="text-center">
         <h2 className="text-xl font-semibold text-gin-title mb-2">Something went wrong</h2>
         <p className="text-sm text-gin-text-light mb-4">
-          {error.message || 'An unexpected error occurred.'}
+          {process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred.'}
         </p>
         <button
           onClick={reset}

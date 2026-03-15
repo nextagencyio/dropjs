@@ -1,10 +1,17 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { loadEntity, getUserProfile, getComments } from '@/lib/server/data';
 import { CommentsSection } from './comments-client';
 import { EditLink } from './edit-link';
 
 export const revalidate = 300;
+
+export async function generateStaticParams() {
+  const { getPublishedNodes } = await import('@/lib/server/data');
+  const result = await getPublishedNodes({ bundles: ['article', 'page'], limit: 100 });
+  return result.data.map((node: { nid: number }) => ({ id: String(node.nid) }));
+}
 
 interface NodeFull {
   nid: number;
@@ -107,11 +114,16 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
 
       {imageUrl && (
         <figure className="mb-6">
-          <img
-            src={imageUrl}
-            alt={node.field_image?.alt || node.title}
-            className="w-full max-h-[300px] sm:max-h-[500px] object-cover rounded"
-          />
+          <div className="relative w-full h-[300px] sm:h-[500px]">
+            <Image
+              src={imageUrl}
+              alt={node.field_image?.alt || node.title}
+              fill
+              sizes="(max-width: 640px) 100vw, 800px"
+              className="object-cover rounded"
+              priority
+            />
+          </div>
           {node.field_image?.alt && (
             <figcaption className="text-sm text-gray-500 mt-2">{node.field_image.alt}</figcaption>
           )}

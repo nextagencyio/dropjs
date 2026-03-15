@@ -4,6 +4,8 @@ dist/
 *.db
 data/
 .env
+.env.local
+.env.vercel
 *.tsbuildinfo
 coverage/
 e2e-data/

@@ -5,6 +5,12 @@ import Pager from '@/components/pager';
 
 export const revalidate = 300;
 
+export async function generateStaticParams() {
+  const { getTaxonomyTerms } = await import('@/lib/server/data');
+  const terms = await getTaxonomyTerms('tags');
+  return terms.map((term: { tid: number }) => ({ tid: String(term.tid) }));
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
 }

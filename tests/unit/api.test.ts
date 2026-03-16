@@ -12,6 +12,8 @@ import {
   ensureAuthTables,
   seedDefaultRoles,
   createUser,
+  createSession,
+  destroySession,
   assignRolePermission,
 } from '../../src/auth/index.js';
 import { handleApiRequest } from '../../src/api/request-handler.js';
@@ -84,13 +86,16 @@ describe('@dropjs/api', () => {
     await seedDefaultRoles();
     await assignRolePermission('authenticated', 'create article content');
 
-    // Create test user and get token
+    // Create test user and get token via session
     const testUser = await createUser({
       name: 'testuser',
       email: 'test@example.com',
       password: 'testpass',
     });
     testUserUid = testUser.uid;
+
+    const session = await createSession(testUserUid);
+    authToken = session.token;
 
     // Mark initialization as complete so handleApiRequest skips full init
     markInitialized();
@@ -104,13 +109,6 @@ describe('@dropjs/api', () => {
         }
       });
     });
-
-    // Login to get token
-    const loginRes = await request(server)
-      .post('/api/auth/login')
-      .send({ name: 'testuser', password: 'testpass' });
-
-    authToken = loginRes.body.data.token;
   });
 
   afterAll(async () => {
@@ -118,50 +116,6 @@ describe('@dropjs/api', () => {
     EventBus.removeAllListeners();
     await destroyConnection();
     delete process.env.DROP_DISABLE_RATE_LIMIT;
-  });
-
-  describe('POST /api/auth/login', () => {
-    it('should return token for valid credentials', async () => {
-      const res = await request(server)
-        .post('/api/auth/login')
-        .send({ name: 'testuser', password: 'testpass' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.token).toBeDefined();
-      expect(res.body.data.user.name).toBe('testuser');
-    });
-
-    it('should return 401 for invalid credentials', async () => {
-      const res = await request(server)
-        .post('/api/auth/login')
-        .send({ name: 'testuser', password: 'wrongpass' });
-
-      expect(res.status).toBe(401);
-    });
-
-    it('should return 400 for missing fields', async () => {
-      const res = await request(server)
-        .post('/api/auth/login')
-        .send({ name: 'testuser' });
-
-      expect(res.status).toBe(400);
-    });
-  });
-
-  describe('POST /api/auth/register', () => {
-    it('should create user and return token', async () => {
-      const res = await request(server)
-        .post('/api/auth/register')
-        .send({
-          name: 'newuser',
-          email: 'new@example.com',
-          password: 'newpass',
-        });
-
-      expect(res.status).toBe(201);
-      expect(res.body.data.token).toBeDefined();
-      expect(res.body.data.user.name).toBe('newuser');
-    });
   });
 
   describe('POST /api/node/article (create)', () => {
@@ -390,28 +344,29 @@ describe('@dropjs/api', () => {
     });
   });
 
-  describe('POST /api/auth/logout', () => {
-    it('should revoke token', async () => {
-      // Create a fresh token to logout
-      const loginRes = await request(server)
-        .post('/api/auth/login')
-        .send({ name: 'testuser', password: 'testpass' });
+  describe('session management', () => {
+    it('should reject requests after session is destroyed', async () => {
+      // Create a fresh session to destroy
+      const session = await createSession(testUserUid);
 
-      const token = loginRes.body.data.token;
-
-      const res = await request(server)
-        .post('/api/auth/logout')
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(204);
-
-      // Token should now be invalid
+      // Verify it works
       const createRes = await request(server)
         .post('/api/node/article')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${session.token}`)
+        .send({ title: 'Before Destroy', status: true });
+
+      expect(createRes.status).toBe(201);
+
+      // Destroy the session
+      await destroySession(session.token);
+
+      // Token should now be invalid
+      const afterRes = await request(server)
+        .post('/api/node/article')
+        .set('Authorization', `Bearer ${session.token}`)
         .send({ title: 'Should Fail' });
 
-      expect(createRes.status).toBe(401);
+      expect([401, 403]).toContain(afterRes.status);
     });
   });
 

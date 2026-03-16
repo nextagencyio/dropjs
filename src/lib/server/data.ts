@@ -73,6 +73,11 @@ import {
   getGroupedFieldLayout,
   type FieldGroup,
 } from '../../core/field-group';
+import {
+  getRecentAuditLog,
+  getAuditLog,
+  type AuditLogEntry,
+} from '../../core/audit-log';
 
 // ── Entity Data ─────────────────────────────────────────────────────
 
@@ -1144,5 +1149,21 @@ export async function searchContent(query: string, limit: number = 50): Promise<
   };
 }
 
+// ── Audit Log ───────────────────────────────────────────────────────
+
+export async function getRecentAuditEntries(limit: number = 50): Promise<AuditLogEntry[]> {
+  await ensureInitialized();
+  return getRecentAuditLog(limit);
+}
+
+export async function getEntityAuditEntries(
+  entityType: string,
+  entityId: number,
+  options?: { limit?: number; offset?: number },
+): Promise<AuditLogEntry[]> {
+  await ensureInitialized();
+  return getAuditLog(entityType, entityId, options);
+}
+
 // Re-export types for convenience
-export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig };
+export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig, AuditLogEntry };

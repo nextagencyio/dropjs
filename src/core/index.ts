@@ -98,8 +98,9 @@ export {
   getMailTemplate,
   listMailTemplates,
   resetMailTemplate,
+  sendWorkflowTransitionEmail,
 } from './mail.js';
-export type { MailMessage, MailTemplateResult, MailTemplateRenderer, MailTemplateContext } from './mail.js';
+export type { MailMessage, MailTemplateResult, MailTemplateRenderer, MailTemplateContext, WorkflowTransitionMailData } from './mail.js';
 
 export {
   ensureUrlAliasTable,
@@ -495,6 +496,15 @@ export type {
   ShortcutSet,
   Shortcut,
 } from './shortcuts.js';
+
+export {
+  ensureAuditLogTable,
+  logAuditEntry,
+  getAuditLog,
+  getRecentAuditLog,
+  registerAuditLogHooks,
+} from './audit-log.js';
+export type { AuditLogEntry, AuditLogQueryOptions } from './audit-log.js';
 
 export { ensureDrupalCompat } from './drupal-compat.js';
 

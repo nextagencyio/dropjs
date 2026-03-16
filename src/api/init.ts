@@ -46,6 +46,8 @@ import {
   ensureContactTables,
   ensureShortcutTables,
   registerDefaultTokens,
+  ensureAuditLogTable,
+  registerAuditLogHooks,
   createLogger,
 } from '../core/index.js';
 import { graphqlModule, jsonapiModule, graphqlComposeModule } from '../modules/index.js';
@@ -195,6 +197,7 @@ async function doInit(): Promise<void> {
   registerSearchHooks();
   registerCacheHooks();
   registerValidationHooks();
+  registerAuditLogHooks();
 
   // Run all table creation in parallel — these are all CREATE TABLE IF NOT EXISTS
   await Promise.all([
@@ -274,6 +277,7 @@ async function ensureSubsystemTables(): Promise<void> {
     ensureActionTriggersTable(),
     ensureContactTables(),
     ensureShortcutTables(),
+    ensureAuditLogTable(),
   ];
 
   await Promise.all(tasks.map((p) => p.catch((err) => {

@@ -21,6 +21,11 @@ const reports = [
     description: 'View most visited pages.',
     href: '/reports/top-pages',
   },
+  {
+    title: 'Audit log',
+    description: 'Track entity changes — who created, updated, or deleted content.',
+    href: '/reports/audit-log',
+  },
 ];
 
 export default function ReportsPage() {

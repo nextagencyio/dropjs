@@ -130,6 +130,7 @@ import {
   handleDeleteShortcut, handleReorderShortcuts, handleListShortcutSets,
 } from './handlers/shortcuts.js';
 import { handleListTokenTypes, handleReplaceTokens } from './handlers/tokens.js';
+import { handleListAuditLog, handleEntityAuditLog } from './handlers/audit-log.js';
 import { handleList } from './handlers/list.js';
 import { handleGet } from './handlers/get.js';
 import { handleCreate } from './handlers/create.js';
@@ -821,6 +822,10 @@ export function buildRouteTable(): RouteEntry[] {
 
     // ── Batch ────────────────────────────────────────────────────────────
     { method: 'POST', pattern: '/api/batch', middleware: authReq(), handler: handleBatch },
+
+    // ── Audit log ───────────────────────────────────────────────────────
+    { method: 'GET', pattern: '/api/audit-log', middleware: adminSite(), handler: handleListAuditLog },
+    { method: 'GET', pattern: '/api/:entityType/:id/audit-log', middleware: adminSite(), handler: handleEntityAuditLog },
 
     // ── Entity lookup by ID (no bundle required) ────────────────────────
     {

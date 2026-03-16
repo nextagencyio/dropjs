@@ -110,6 +110,16 @@ interface RegistrationData {
   username: string;
 }
 
+export interface WorkflowTransitionMailData {
+  entityType: string;
+  entityId: number;
+  entityTitle: string;
+  fromState: string;
+  toState: string;
+  transitionLabel: string;
+  actorName: string;
+}
+
 const defaultTemplates: Record<string, MailTemplateRenderer<any>> = {
   password_reset: (data: PasswordResetData, ctx: MailTemplateContext): MailTemplateResult => {
     const resetUrl = `${ctx.siteUrl}/reset-password?token=${data.token}`;
@@ -133,6 +143,15 @@ const defaultTemplates: Record<string, MailTemplateRenderer<any>> = {
       subject: 'Welcome — your account has been created',
       text: `Welcome ${data.username}!\n\nYour account has been created. Log in at:\n${ctx.siteUrl}/login`,
       html: `<p>Welcome <strong>${data.username}</strong>!</p><p>Your account has been created. <a href="${ctx.siteUrl}/login">Log in here</a>.</p>`,
+    };
+  },
+
+  workflow_transition: (data: WorkflowTransitionMailData, ctx: MailTemplateContext): MailTemplateResult => {
+    const editUrl = `${ctx.siteUrl}/node/${data.entityId}/edit`;
+    return {
+      subject: `[${ctx.siteName}] ${data.entityTitle} — ${data.transitionLabel}`,
+      text: `Content "${data.entityTitle}" (${data.entityType} #${data.entityId}) has been moved from "${data.fromState}" to "${data.toState}" by ${data.actorName}.\n\nTransition: ${data.transitionLabel}\n\nEdit: ${editUrl}`,
+      html: `<p>Content <strong>${data.entityTitle}</strong> (${data.entityType} #${data.entityId}) has been moved from <em>${data.fromState}</em> to <em>${data.toState}</em> by <strong>${data.actorName}</strong>.</p><p>Transition: ${data.transitionLabel}</p><p><a href="${editUrl}">Edit content</a></p>`,
     };
   },
 };
@@ -251,4 +270,14 @@ export async function sendContactNotification(data: {
  */
 export async function sendRegistrationEmail(email: string, username: string): Promise<boolean> {
   return sendTemplatedMail('registration', email, { email, username });
+}
+
+/**
+ * Send a workflow transition notification email.
+ */
+export async function sendWorkflowTransitionEmail(
+  to: string,
+  data: WorkflowTransitionMailData
+): Promise<boolean> {
+  return sendTemplatedMail('workflow_transition', to, data);
 }

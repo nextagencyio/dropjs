@@ -7,16 +7,18 @@ import {
   sendPasswordResetEmail,
   sendContactNotification,
   sendRegistrationEmail,
+  sendWorkflowTransitionEmail,
   sendTemplatedMail,
 } from '../../src/core/mail.js';
 import type { MailTemplateRenderer, MailTemplateContext } from '../../src/core/mail.js';
 
 describe('Mail Template System', () => {
-  it('should have 3 default templates registered', () => {
+  it('should have 4 default templates registered', () => {
     const keys = listMailTemplates();
     expect(keys).toContain('password_reset');
     expect(keys).toContain('contact_notification');
     expect(keys).toContain('registration');
+    expect(keys).toContain('workflow_transition');
   });
 
   it('should return a template renderer by key', () => {
@@ -65,6 +67,40 @@ describe('Mail Template System', () => {
     expect(result.subject).toContain('Welcome');
     expect(result.text).toContain('bob');
     expect(result.text).toContain('https://example.com/login');
+  });
+
+  it('should render workflow transition template', () => {
+    const renderer = getMailTemplate('workflow_transition')!;
+    const ctx: MailTemplateContext = { siteUrl: 'https://example.com', siteName: 'Test Site' };
+    const result = renderer({
+      entityType: 'node',
+      entityId: 42,
+      entityTitle: 'My Article',
+      fromState: 'Draft',
+      toState: 'Published',
+      transitionLabel: 'Publish',
+      actorName: 'admin',
+    }, ctx);
+
+    expect(result.subject).toBe('[Test Site] My Article — Publish');
+    expect(result.text).toContain('My Article');
+    expect(result.text).toContain('Draft');
+    expect(result.text).toContain('Published');
+    expect(result.text).toContain('admin');
+    expect(result.text).toContain('https://example.com/node/42/edit');
+  });
+
+  it('should send workflow transition email via template (console transport)', async () => {
+    const result = await sendWorkflowTransitionEmail('editor@test.com', {
+      entityType: 'node',
+      entityId: 1,
+      entityTitle: 'Test Content',
+      fromState: 'Draft',
+      toState: 'In Review',
+      transitionLabel: 'Submit for Review',
+      actorName: 'testuser',
+    });
+    expect(result).toBe(true);
   });
 
   describe('Template Override', () => {

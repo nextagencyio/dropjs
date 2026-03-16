@@ -11,6 +11,11 @@
 import { saveConfig, loadConfig, loadAllConfig, deleteConfig } from './config-storage.js';
 import { Entity } from './entity.js';
 import { stateGet, stateSet } from './state.js';
+import { EventBus } from './event-bus.js';
+import { sendWorkflowTransitionEmail } from './mail.js';
+import { createLogger } from './logger.js';
+
+const logger = createLogger('workflow');
 
 export interface WorkflowState {
   id: string;           // e.g. 'draft', 'review', 'published', 'archived'
@@ -186,7 +191,83 @@ export async function applyTransition(
 
   await stateSet(logKey, history);
 
+  // Emit workflow transition event
+  await EventBus.emit('workflow:transition', {
+    entity,
+    entityType,
+    entityId,
+    workflow,
+    transition,
+    from_state: currentState,
+    to_state: transition.to,
+    uid,
+  });
+
+  // Send email notifications (non-blocking)
+  sendWorkflowNotifications({
+    entity,
+    entityType,
+    entityId,
+    workflow,
+    transition,
+    fromState: currentState,
+    toState: transition.to,
+    fromStateLabel: workflow.states[currentState]?.label ?? currentState,
+    toStateLabel: targetState.label,
+    uid,
+  }).catch((err) => {
+    logger.error('Failed to send workflow notifications', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+
   return entity;
+}
+
+/**
+ * Send email notifications for a workflow transition.
+ * Notifies the admin email (SITE_EMAIL) about the transition.
+ */
+async function sendWorkflowNotifications(params: {
+  entity: Entity;
+  entityType: string;
+  entityId: number;
+  workflow: Workflow;
+  transition: WorkflowTransition;
+  fromState: string;
+  toState: string;
+  fromStateLabel: string;
+  toStateLabel: string;
+  uid?: number;
+}): Promise<void> {
+  const { entity, entityType, entityId, transition, fromStateLabel, toStateLabel, uid } = params;
+
+  // Resolve actor name
+  let actorName = 'System';
+  if (uid) {
+    try {
+      const { loadUser } = await import('../auth/user.js');
+      const user = await loadUser(uid);
+      if (user) actorName = user.name;
+    } catch {
+      // Auth module may not be available
+    }
+  }
+
+  const entityTitle = entity.get('title') as string || `${entityType} #${entityId}`;
+  const adminEmail = process.env.SITE_EMAIL || process.env.MAIL_FROM;
+
+  if (adminEmail) {
+    await sendWorkflowTransitionEmail(adminEmail, {
+      entityType,
+      entityId,
+      entityTitle,
+      fromState: fromStateLabel,
+      toState: toStateLabel,
+      transitionLabel: transition.label,
+      actorName,
+    });
+  }
 }
 
 /**

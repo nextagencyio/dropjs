@@ -1,4 +1,5 @@
 import type { FieldSettings } from '../field/index.js';
+import { registerBundlePermissions } from '../auth/permissions.js';
 
 export interface FieldDefinition {
   type: string;
@@ -74,6 +75,9 @@ function registryKey(entityType: string, bundle: string): string {
 export function registerEntityType(definition: EntityTypeDefinition): void {
   const key = registryKey(definition.entity_type, definition.bundle);
   entityTypeRegistry.set(key, definition);
+
+  // Generate per-bundle CRUD permissions (e.g., "create article content")
+  registerBundlePermissions(definition.entity_type, definition.bundle, definition.label);
 }
 
 export function getEntityTypeDefinition(

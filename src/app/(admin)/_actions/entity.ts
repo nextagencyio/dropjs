@@ -338,6 +338,25 @@ export async function searchEntitiesAction(
   }
 }
 
+export async function restoreRevision(
+  nid: number,
+  vid: number,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('edit any content');
+  if (!auth.success) return auth;
+
+  try {
+    const entity = await Entity.revertToRevision('node', nid, vid);
+    revalidatePath('/content');
+    revalidatePath(`/node/${nid}/edit`);
+    revalidatePath(`/node/${nid}/revisions`);
+    return { success: true, data: entity.toJSON() };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
 export async function reorderFields(
   entityType: string,
   bundle: string,

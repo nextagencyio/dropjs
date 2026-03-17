@@ -27,6 +27,7 @@ export {
   getPermission,
   getAllPermissions,
   clearPermissionRegistry,
+  registerBundlePermissions,
 } from './permissions.js';
 export type { PermissionDefinition } from './permissions.js';
 

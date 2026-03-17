@@ -131,6 +131,9 @@ import {
 } from './handlers/shortcuts.js';
 import { handleListTokenTypes, handleReplaceTokens } from './handlers/tokens.js';
 import { handleListAuditLog, handleEntityAuditLog } from './handlers/audit-log.js';
+import {
+  handleListRevisions, handleGetRevision, handleDiffRevisions, handleRestoreRevision,
+} from './handlers/revisions.js';
 import { handleList } from './handlers/list.js';
 import { handleGet } from './handlers/get.js';
 import { handleCreate } from './handlers/create.js';
@@ -822,6 +825,12 @@ export function buildRouteTable(): RouteEntry[] {
 
     // ── Batch ────────────────────────────────────────────────────────────
     { method: 'POST', pattern: '/api/batch', middleware: authReq(), handler: handleBatch },
+
+    // ── Revision history ────────────────────────────────────────────────
+    { method: 'GET', pattern: '/api/node/:id/revisions/diff', middleware: authReq(), handler: handleDiffRevisions },
+    { method: 'GET', pattern: '/api/node/:id/revisions', middleware: authReq(), handler: handleListRevisions },
+    { method: 'GET', pattern: '/api/node/:id/revisions/:vid', middleware: authReq(), handler: handleGetRevision },
+    { method: 'POST', pattern: '/api/node/:id/revisions/:vid/restore', middleware: authReq(), handler: handleRestoreRevision },
 
     // ── Audit log ───────────────────────────────────────────────────────
     { method: 'GET', pattern: '/api/audit-log', middleware: adminSite(), handler: handleListAuditLog },

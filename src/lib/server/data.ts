@@ -1165,5 +1165,67 @@ export async function getEntityAuditEntries(
   return getAuditLog(entityType, entityId, options);
 }
 
+// ── Node Revisions ──────────────────────────────────────────────────
+
+export interface RevisionSummary {
+  vid: number;
+  revision_uid: number;
+  revision_timestamp: number;
+  revision_log: string | null;
+  author_name: string | null;
+}
+
+export async function getNodeRevisions(nid: number): Promise<RevisionSummary[]> {
+  await ensureInitialized();
+  const revisions = await Entity.listRevisions('node', nid);
+
+  const conn = (await import('../../db/index')).getConnection();
+
+  const enriched: RevisionSummary[] = [];
+  for (const rev of revisions) {
+    // Get revision_log from node_revision
+    let revisionLog: string | null = null;
+    try {
+      const logRows = await conn('node_revision')
+        .select('revision_log')
+        .where('vid', rev.vid)
+        .first();
+      revisionLog = logRows?.revision_log ?? null;
+    } catch {
+      // Column may not exist
+    }
+
+    // Get author name
+    let authorName: string | null = null;
+    if (rev.revision_uid) {
+      try {
+        const userRow = await conn('users_field_data')
+          .select('name')
+          .where('uid', rev.revision_uid)
+          .first();
+        authorName = userRow?.name ?? null;
+      } catch {
+        // Table may not exist
+      }
+    }
+
+    enriched.push({
+      vid: rev.vid,
+      revision_uid: rev.revision_uid,
+      revision_timestamp: rev.revision_timestamp,
+      revision_log: revisionLog,
+      author_name: authorName,
+    });
+  }
+
+  return enriched;
+}
+
+export async function getNodeRevision(nid: number, vid: number): Promise<EntityData | null> {
+  await ensureInitialized();
+  const entity = await Entity.loadRevision('node', nid, vid);
+  return entity ? entity.toJSON() : null;
+}
+
 // Re-export types for convenience
 export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig, AuditLogEntry };

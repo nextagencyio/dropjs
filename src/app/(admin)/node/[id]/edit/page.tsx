@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { loadEntity } from '@/lib/server/data';
+import { getSessionUser } from '@/lib/server/auth';
+import { userHasPermission } from '../../../../../auth/access';
 import { NodeEditForm } from './node-edit-form';
 
 export default async function NodeEditPage({
@@ -16,5 +18,8 @@ export default async function NodeEditPage({
   const bundle = entity.type as string;
   const bundleLabel = bundle.replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  return <NodeEditForm id={nid} bundle={bundle} bundleLabel={bundleLabel} />;
+  const user = await getSessionUser();
+  const isAdmin = user ? await userHasPermission(user, 'administer nodes') : false;
+
+  return <NodeEditForm id={nid} bundle={bundle} bundleLabel={bundleLabel} isAdmin={isAdmin} />;
 }

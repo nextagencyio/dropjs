@@ -31,6 +31,46 @@ export function clearPermissionRegistry(): void {
   permissionRegistry.clear();
 }
 
+/**
+ * Register per-bundle CRUD permissions for an entity type.
+ * Generates Drupal-style permissions like "create article content",
+ * "edit own article content", "edit any article content", etc.
+ */
+export function registerBundlePermissions(
+  entityType: string,
+  bundle: string,
+  label: string,
+): void {
+  if (entityType !== 'node') return; // Only node bundles get per-bundle permissions (Drupal convention)
+
+  const perms: Record<string, PermissionDefinition> = {
+    [`create ${bundle} content`]: {
+      title: `${label}: Create new content`,
+      description: `Create new ${label} content items`,
+    },
+    [`edit own ${bundle} content`]: {
+      title: `${label}: Edit own content`,
+      description: `Edit own ${label} content items`,
+    },
+    [`edit any ${bundle} content`]: {
+      title: `${label}: Edit any content`,
+      description: `Edit any ${label} content items`,
+      restrict: true,
+    },
+    [`delete own ${bundle} content`]: {
+      title: `${label}: Delete own content`,
+      description: `Delete own ${label} content items`,
+    },
+    [`delete any ${bundle} content`]: {
+      title: `${label}: Delete any content`,
+      description: `Delete any ${label} content items`,
+      restrict: true,
+    },
+  };
+
+  definePermissions(perms);
+}
+
 // Define core content permissions
 definePermissions({
   // Content viewing

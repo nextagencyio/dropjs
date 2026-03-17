@@ -27,7 +27,7 @@ export async function checkEntityAccess(
   operation: EntityOperation,
   ctx: EntityAccessContext
 ): Promise<boolean> {
-  const { user, entity } = ctx;
+  const { user, entity, bundle } = ctx;
 
   // Admin bypasses all access checks
   if (await userHasPermission(user, 'administer nodes')) {
@@ -38,11 +38,11 @@ export async function checkEntityAccess(
     case 'view':
       return checkViewAccess(user, entity);
     case 'create':
-      return checkCreateAccess(user);
+      return checkCreateAccess(user, bundle);
     case 'update':
-      return checkUpdateAccess(user, entity);
+      return checkUpdateAccess(user, entity, bundle);
     case 'delete':
-      return checkDeleteAccess(user, entity);
+      return checkDeleteAccess(user, entity, bundle);
     default:
       return false;
   }
@@ -79,27 +79,38 @@ async function checkViewAccess(
 }
 
 async function checkCreateAccess(
-  user: UserData | null
+  user: UserData | null,
+  bundle?: string,
 ): Promise<boolean> {
+  // Check per-bundle permission first (e.g., "create article content")
+  if (bundle && await userHasPermission(user, `create ${bundle} content`)) {
+    return true;
+  }
+  // Fall back to generic permission
   return userHasPermission(user, 'create content');
 }
 
 async function checkUpdateAccess(
   user: UserData | null,
-  entity?: EntityAccessContext['entity']
+  entity?: EntityAccessContext['entity'],
+  bundle?: string,
 ): Promise<boolean> {
+  // Check per-bundle "edit any" first
+  if (bundle && await userHasPermission(user, `edit any ${bundle} content`)) {
+    return true;
+  }
   if (await userHasPermission(user, 'edit any content')) {
     return true;
   }
 
-  if (
-    user &&
-    entity &&
-    entity.uid != null &&
-    entity.uid === user.uid &&
-    (await userHasPermission(user, 'edit own content'))
-  ) {
-    return true;
+  // Check per-bundle "edit own"
+  if (user && entity && entity.uid != null && entity.uid === user.uid) {
+    if (bundle && await userHasPermission(user, `edit own ${bundle} content`)) {
+      return true;
+    }
+    if (await userHasPermission(user, 'edit own content')) {
+      return true;
+    }
   }
 
   return false;
@@ -107,20 +118,25 @@ async function checkUpdateAccess(
 
 async function checkDeleteAccess(
   user: UserData | null,
-  entity?: EntityAccessContext['entity']
+  entity?: EntityAccessContext['entity'],
+  bundle?: string,
 ): Promise<boolean> {
+  // Check per-bundle "delete any" first
+  if (bundle && await userHasPermission(user, `delete any ${bundle} content`)) {
+    return true;
+  }
   if (await userHasPermission(user, 'delete any content')) {
     return true;
   }
 
-  if (
-    user &&
-    entity &&
-    entity.uid != null &&
-    entity.uid === user.uid &&
-    (await userHasPermission(user, 'delete own content'))
-  ) {
-    return true;
+  // Check per-bundle "delete own"
+  if (user && entity && entity.uid != null && entity.uid === user.uid) {
+    if (bundle && await userHasPermission(user, `delete own ${bundle} content`)) {
+      return true;
+    }
+    if (await userHasPermission(user, 'delete own content')) {
+      return true;
+    }
   }
 
   return false;

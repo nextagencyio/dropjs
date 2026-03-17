@@ -3,15 +3,18 @@
 import Link from 'next/link';
 import { ChevronRight, Clock } from 'lucide-react';
 import { EntityForm } from '@/components/entity-form';
+import { ContentLockBanner } from '@/components/content-lock-banner';
 
 export function NodeEditForm({
   id,
   bundle,
   bundleLabel,
+  isAdmin,
 }: {
   id: number;
   bundle: string;
   bundleLabel: string;
+  isAdmin?: boolean;
 }) {
   return (
     <div>
@@ -22,6 +25,8 @@ export function NodeEditForm({
         <ChevronRight className="w-3.5 h-3.5 text-gin-text-light" />
         <span className="text-gin-text-light">Edit</span>
       </div>
+
+      <ContentLockBanner entityType="node" entityId={id} isAdmin={isAdmin} />
 
       <div className="flex items-center justify-between mb-2">
         <div>

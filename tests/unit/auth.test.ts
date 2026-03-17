@@ -21,6 +21,7 @@ import {
   userHasPermission,
   roleHasPermission,
   definePermissions,
+  checkEntityAccess,
 } from '../../src/auth/index.js';
 import { ensureConfigTable } from '../../src/core/index.js';
 
@@ -221,6 +222,99 @@ describe('@dropjs/auth', () => {
       expect(
         await userHasPermission(null, 'create article content')
       ).toBe(false);
+    });
+  });
+
+  describe('per-bundle entity access', () => {
+    let bundleUser: Awaited<ReturnType<typeof createUser>>;
+
+    beforeAll(async () => {
+      // Create a role with only per-bundle article permissions (not generic)
+      await createRole('article_editor', 'Article Editor');
+      await assignRolePermission('article_editor', 'access content');
+      await assignRolePermission('article_editor', 'create article content');
+      await assignRolePermission('article_editor', 'edit own article content');
+      await assignRolePermission('article_editor', 'delete any article content');
+
+      bundleUser = await createUser({
+        name: 'bundle_editor',
+        email: 'bundle@example.com',
+        password: 'test',
+        roles: ['authenticated', 'article_editor'],
+      });
+    });
+
+    it('should allow create with per-bundle permission', async () => {
+      const allowed = await checkEntityAccess('create', {
+        entityType: 'node',
+        bundle: 'article',
+        user: bundleUser,
+      });
+      expect(allowed).toBe(true);
+    });
+
+    it('should deny create for bundles without per-bundle permission', async () => {
+      // Remove the generic 'create content' permission to test isolation
+      // bundleUser has 'authenticated' role which has 'create content',
+      // so this will still pass via the generic permission.
+      // Instead, create a user with ONLY the article_editor role.
+      const restrictedUser = await createUser({
+        name: 'restricted_editor',
+        email: 'restricted@example.com',
+        password: 'test',
+        roles: ['article_editor'],
+      });
+
+      // Should allow article creation
+      expect(
+        await checkEntityAccess('create', {
+          entityType: 'node',
+          bundle: 'article',
+          user: restrictedUser,
+        })
+      ).toBe(true);
+
+      // Should deny page creation (no generic 'create content' and no 'create page content')
+      expect(
+        await checkEntityAccess('create', {
+          entityType: 'node',
+          bundle: 'page',
+          user: restrictedUser,
+        })
+      ).toBe(false);
+    });
+
+    it('should check per-bundle edit own permission', async () => {
+      const allowed = await checkEntityAccess('update', {
+        entityType: 'node',
+        bundle: 'article',
+        entity: { uid: bundleUser.uid, status: 1 },
+        user: bundleUser,
+      });
+      expect(allowed).toBe(true);
+    });
+
+    it('should deny edit of others content with only edit own bundle perm', async () => {
+      const allowed = await checkEntityAccess('update', {
+        entityType: 'node',
+        bundle: 'article',
+        entity: { uid: 9999, status: 1 },
+        user: bundleUser,
+      });
+      // bundleUser has 'edit own article content' but not 'edit any article content'
+      // and the authenticated role has 'edit own content' (generic), but entity uid doesn't match
+      expect(allowed).toBe(false);
+    });
+
+    it('should check per-bundle delete any permission', async () => {
+      const allowed = await checkEntityAccess('delete', {
+        entityType: 'node',
+        bundle: 'article',
+        entity: { uid: 9999, status: 1 },
+        user: bundleUser,
+      });
+      // bundleUser has 'delete any article content'
+      expect(allowed).toBe(true);
     });
   });
 });

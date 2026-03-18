@@ -357,6 +357,47 @@ export async function restoreRevision(
   }
 }
 
+export async function cancelSchedule(
+  entityType: string,
+  entityId: number,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('edit any content');
+  if (!auth.success) return auth;
+
+  try {
+    const { cancelScheduledTransition } = await import('../../../core/scheduler');
+    const cancelled = await cancelScheduledTransition(entityType, entityId);
+    if (!cancelled) return { success: false, error: 'No schedule found for this entity' };
+    revalidatePath('/content/scheduled');
+    revalidatePath(`/node/${entityId}/edit`);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function setSchedule(
+  entityType: string,
+  entityId: number,
+  transition: 'publish' | 'unpublish',
+  scheduledDate: string,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('edit any content');
+  if (!auth.success) return auth;
+
+  try {
+    const { scheduleTransition } = await import('../../../core/scheduler');
+    const entry = await scheduleTransition(entityType, entityId, transition, scheduledDate, auth.user.uid);
+    revalidatePath('/content/scheduled');
+    revalidatePath(`/node/${entityId}/edit`);
+    return { success: true, data: entry };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
 export async function reorderFields(
   entityType: string,
   bundle: string,

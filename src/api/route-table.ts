@@ -132,6 +132,9 @@ import {
 import { handleListTokenTypes, handleReplaceTokens } from './handlers/tokens.js';
 import { handleListAuditLog, handleEntityAuditLog } from './handlers/audit-log.js';
 import {
+  handleListRedirects, handleCreateRedirect, handleUpdateRedirect, handleDeleteRedirect,
+} from './handlers/redirects.js';
+import {
   handleListRevisions, handleGetRevision, handleDiffRevisions, handleRestoreRevision,
 } from './handlers/revisions.js';
 import { handleList } from './handlers/list.js';
@@ -447,6 +450,12 @@ export function buildRouteTable(): RouteEntry[] {
     { method: 'GET', pattern: '/api/aliases/resolve', handler: handleResolveAlias },
     { method: 'POST', pattern: '/api/aliases', middleware: adminNodes(), handler: handleCreateAlias },
     { method: 'DELETE', pattern: '/api/aliases/:id', middleware: adminNodes(), handler: handleDeleteAlias },
+
+    // ── Redirects ────────────────────────────────────────────────────────
+    { method: 'GET', pattern: '/api/redirects', middleware: adminSite(), handler: handleListRedirects },
+    { method: 'POST', pattern: '/api/redirects', middleware: adminSite(), handler: handleCreateRedirect },
+    { method: 'PATCH', pattern: '/api/redirects/:id', middleware: adminSite(), handler: handleUpdateRedirect },
+    { method: 'DELETE', pattern: '/api/redirects/:id', middleware: adminSite(), handler: handleDeleteRedirect },
 
     // ── Pathauto ─────────────────────────────────────────────────────────
     { method: 'GET', pattern: '/api/pathauto/patterns', middleware: adminNodes(), handler: handleListPatterns },

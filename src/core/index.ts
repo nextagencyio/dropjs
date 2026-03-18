@@ -509,6 +509,17 @@ export type { AuditLogEntry, AuditLogQueryOptions } from './audit-log.js';
 export { ensureDrupalCompat } from './drupal-compat.js';
 
 export {
+  ensureRedirectTable,
+  createRedirect,
+  updateRedirect,
+  deleteRedirect,
+  resolveRedirect,
+  listRedirects,
+  registerRedirectHooks,
+} from './redirect.js';
+export type { Redirect } from './redirect.js';
+
+export {
   ensureFloodTable,
   floodRegister,
   floodIsAllowed,

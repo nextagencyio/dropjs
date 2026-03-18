@@ -42,7 +42,7 @@ export async function checkAndAcquireLock(
   }
 
   // Acquire or renew the lock
-  const result = await acquireLock(entityType, entityId, user.uid, user.name);
+  const result = await acquireLock(entityType, entityId, user.uid!, user.name);
   return {
     success: result.success,
     lock: result.lock,
@@ -61,7 +61,7 @@ export async function releaseContentLock(
   const user = await getSessionUser();
   if (!user) return { success: false, error: 'Authentication required' };
 
-  await releaseLock(entityType, entityId, user.uid);
+  await releaseLock(entityType, entityId, user.uid!);
   return { success: true, lock: null };
 }
 
@@ -82,7 +82,7 @@ export async function forceBreakLock(
   await breakLock(entityType, entityId);
 
   // Now acquire the lock for this user
-  const result = await acquireLock(entityType, entityId, user.uid, user.name);
+  const result = await acquireLock(entityType, entityId, user.uid!, user.name);
   return {
     success: true,
     lock: result.lock,

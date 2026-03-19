@@ -1208,3 +1208,69 @@ export async function loadMediaListAction(params?: {
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Redirects ────────────────────────────────────────────────────────
+
+export async function createRedirectAction(data: {
+  source_path: string;
+  redirect_path: string;
+  status_code?: number;
+  langcode?: string;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer redirects');
+  if (!auth.success) return auth;
+
+  try {
+    const { createRedirect } = await import('../../../core/redirect');
+    const redirect = await createRedirect(
+      data.source_path,
+      data.redirect_path,
+      data.status_code ?? 301,
+      data.langcode ?? 'en',
+    );
+    revalidatePath('/config/redirects');
+    return { success: true, data: redirect };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function updateRedirectAction(
+  id: number,
+  data: {
+    source_path?: string;
+    redirect_path?: string;
+    status_code?: number;
+    langcode?: string;
+    enabled?: number;
+  },
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer redirects');
+  if (!auth.success) return auth;
+
+  try {
+    const { updateRedirect } = await import('../../../core/redirect');
+    await updateRedirect(id, data);
+    revalidatePath('/config/redirects');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function deleteRedirectAction(id: number): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer redirects');
+  if (!auth.success) return auth;
+
+  try {
+    const { deleteRedirect } = await import('../../../core/redirect');
+    await deleteRedirect(id);
+    revalidatePath('/config/redirects');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

@@ -1227,5 +1227,30 @@ export async function getNodeRevision(nid: number, vid: number): Promise<EntityD
   return entity ? entity.toJSON() : null;
 }
 
+// ── Redirects ────────────────────────────────────────────────────────
+
+export interface RedirectEntry {
+  id: number;
+  uuid: string;
+  source_path: string;
+  redirect_path: string;
+  status_code: number;
+  langcode: string;
+  enabled: number;
+  count: number;
+  created: number | null;
+  changed: number | null;
+}
+
+export async function getRedirects(options?: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+}): Promise<{ redirects: RedirectEntry[]; total: number }> {
+  await ensureInitialized();
+  const { listRedirects } = await import('../../core/redirect.js');
+  return listRedirects(options) as Promise<{ redirects: RedirectEntry[]; total: number }>;
+}
+
 // Re-export types for convenience
 export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig, AuditLogEntry };

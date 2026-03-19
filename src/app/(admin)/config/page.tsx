@@ -114,6 +114,11 @@ const categories = [
         description: 'Configure automatic URL alias generation per content type',
         to: '/config/pathauto',
       },
+      {
+        label: 'URL redirects',
+        description: 'Manage 301/302 URL redirects',
+        to: '/config/redirects',
+      },
     ],
   },
 ];

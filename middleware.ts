@@ -1,9 +1,10 @@
+import { NextResponse } from 'next/server';
 import NextAuth from 'next-auth';
 import authConfig from './auth.config';
 
 const { auth } = NextAuth(authConfig);
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
 
@@ -24,6 +25,26 @@ export default auth((req) => {
   // Redirect authenticated users away from login page
   if (pathname === '/login' && isLoggedIn) {
     return Response.redirect(new URL('/', req.nextUrl));
+  }
+
+  // Check URL redirects for public-facing paths
+  if (!isAdminRoute && !isDashboard && pathname !== '/login') {
+    try {
+      const checkUrl = new URL('/api/redirect-check', req.nextUrl.origin);
+      checkUrl.searchParams.set('path', pathname);
+      const res = await fetch(checkUrl, { headers: { 'x-internal': '1' } });
+      if (res.ok) {
+        const { redirect } = await res.json();
+        if (redirect?.destination) {
+          const dest = redirect.destination.startsWith('http')
+            ? redirect.destination
+            : new URL(redirect.destination, req.nextUrl.origin).toString();
+          return NextResponse.redirect(dest, redirect.statusCode || 301);
+        }
+      }
+    } catch {
+      // Don't block the request if redirect check fails
+    }
   }
 });
 

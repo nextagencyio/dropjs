@@ -46,6 +46,8 @@ const menuItems: MenuItem[] = [
     icon: icons.content,
     dropdown: [
       { href: '/content', label: 'Content' },
+      { href: '/content/scheduled', label: 'Scheduled' },
+      { href: '/media', label: 'Media' },
     ],
   },
   {
@@ -61,7 +63,17 @@ const menuItems: MenuItem[] = [
   },
   { label: 'Extend', icon: icons.extend, href: '/extend' },
   { label: 'Appearance', icon: icons.appearance, href: '/appearance' },
-  { label: 'Configuration', icon: icons.config, href: '/config' },
+  {
+    label: 'Configuration',
+    icon: icons.config,
+    dropdown: [
+      { href: '/config', label: 'Configuration' },
+      { href: '/config/site', label: 'Site settings' },
+      { href: '/config/url-aliases', label: 'URL aliases' },
+      { href: '/config/redirects', label: 'URL redirects' },
+      { href: '/config/languages', label: 'Languages' },
+    ],
+  },
   {
     label: 'People',
     icon: icons.people,
@@ -70,7 +82,16 @@ const menuItems: MenuItem[] = [
       { href: '/people/roles', label: 'Roles' },
     ],
   },
-  { label: 'Reports', icon: icons.reports, href: '/reports' },
+  {
+    label: 'Reports',
+    icon: icons.reports,
+    dropdown: [
+      { href: '/reports', label: 'Reports' },
+      { href: '/reports/audit-log', label: 'Audit log' },
+      { href: '/reports/logs', label: 'Recent log messages' },
+      { href: '/reports/status', label: 'Status report' },
+    ],
+  },
   { label: 'Help', icon: icons.help, href: '/help' },
 ];
 

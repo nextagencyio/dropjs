@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Search, FileText, ChevronDown, Trash2 } from 'lucide-react';
+import { Plus, Search, FileText, ChevronDown, Trash2, Calendar } from 'lucide-react';
 import { deleteEntity, updateEntity } from '@/app/(admin)/_actions/entity';
 
 interface EntityTypeDefinition {
@@ -151,6 +151,23 @@ export default function ContentListClient({ types, entities: initialEntities, to
         >
           <Plus className="w-4 h-4" />
           Add content
+        </Link>
+      </div>
+
+      {/* Secondary nav */}
+      <div className="flex items-center gap-1 mb-4 border-b border-gin-border">
+        <span
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gin-primary border-b-2 border-gin-primary -mb-px"
+        >
+          <FileText className="w-4 h-4" />
+          All content
+        </span>
+        <Link
+          href="/content/scheduled"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gin-text-light hover:text-gin-text border-b-2 border-transparent hover:border-gin-border -mb-px transition-colors"
+        >
+          <Calendar className="w-4 h-4" />
+          Scheduled
         </Link>
       </div>
 

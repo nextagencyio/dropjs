@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { loadEntity, getUserProfile, getComments } from '@/lib/server/data';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import { CommentsSection } from './comments-client';
 import { EditLink } from './edit-link';
 
@@ -93,8 +94,15 @@ export default async function NodeViewPage({ params }: { params: Promise<{ id: s
   const author = node.uid ? await getUserProfile(node.uid) : null;
   const imageUrl = node.field_image?.large_url || node.field_image?.url;
 
+  const bundleLabel = node.type ? node.type.replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '';
+
   return (
     <article>
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/front' },
+        ...(bundleLabel ? [{ label: bundleLabel }] : []),
+        { label: node.title },
+      ]} />
       <header className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{node.title}</h1>
         <div className="flex items-center gap-2 sm:gap-3 text-sm text-gray-500 flex-wrap">

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getUserProfile, listEntities } from '@/lib/server/data';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 
 export const revalidate = 300;
 
@@ -140,6 +141,10 @@ export default async function UserProfilePage({ params }: { params: Promise<{ ui
 
   return (
     <div>
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/front' },
+        { label: user.name },
+      ]} />
       <header className="mb-8 pb-6 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
           <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gin-primary/10 flex items-center justify-center text-xl sm:text-2xl font-bold text-gin-primary">

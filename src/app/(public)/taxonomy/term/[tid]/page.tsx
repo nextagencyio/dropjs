@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { loadEntity, getNodesByTag, type EntityData } from '@/lib/server/data';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import Pager from '@/components/pager';
 
 export const revalidate = 300;
@@ -66,6 +67,11 @@ export default async function TaxonomyTermPage({ params, searchParams }: { param
 
   return (
     <div>
+      <Breadcrumbs items={[
+        { label: 'Home', href: '/front' },
+        { label: 'Tags' },
+        { label: termName },
+      ]} />
       <h1 className="text-3xl font-bold text-gray-900 mb-6">{termName}</h1>
 
       {nodes.length === 0 && currentPage === 1 ? (

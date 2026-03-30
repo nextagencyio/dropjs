@@ -1,4 +1,4 @@
-import { test, expect, apiPost, apiGet, apiDelete } from './fixtures';
+import { test, expect, apiPost, apiGet, apiPatch, apiDelete } from './fixtures';
 
 test.describe('Redirects Admin UI', () => {
   test('should load redirects page with empty state', async ({ authenticatedPage: page }) => {
@@ -236,5 +236,73 @@ test.describe('Audit Log', () => {
     const audit = await auditRes.json();
     expect(audit.data.length).toBeGreaterThanOrEqual(1);
     expect(audit.data[0].action).toBe('insert');
+  });
+});
+
+test.describe('Redirect Middleware', () => {
+  test('should follow redirect via redirect-check API', async ({ authenticatedPage: page }) => {
+    // Use a unique path to avoid collisions with other tests
+    const uniquePath = `/middleware-test-${Date.now()}`;
+
+    // Create a redirect from unique path to /front
+    const createRes = await apiPost(page, '/api/redirects', {
+      source_path: uniquePath,
+      redirect_path: '/front',
+      status_code: 301,
+    });
+    expect(createRes.status()).toBe(201);
+    const created = await createRes.json();
+
+    // Verify the redirect-check API resolves it
+    const checkRes = await page.request.get(`/api/redirect-check?path=${encodeURIComponent(uniquePath)}`);
+    expect(checkRes.status()).toBe(200);
+    const check = await checkRes.json();
+    expect(check.redirect).not.toBeNull();
+    expect(check.redirect.destination).toBe('/front');
+    expect(check.redirect.statusCode).toBe(301);
+
+    // Clean up
+    await apiDelete(page, `/api/redirects/${created.data.id}`);
+  });
+
+  test('should return null for non-redirected path', async ({ authenticatedPage: page }) => {
+    const checkRes = await page.request.get('/api/redirect-check?path=/this-does-not-exist');
+    expect(checkRes.status()).toBe(200);
+    const check = await checkRes.json();
+    expect(check.redirect).toBeNull();
+  });
+});
+
+test.describe('Public Breadcrumbs', () => {
+  test('should show breadcrumbs on node detail page', async ({ authenticatedPage: page }) => {
+    // Create a published node
+    const createRes = await apiPost(page, '/api/node/article', {
+      title: 'Breadcrumb Test Article',
+      status: true,
+    });
+    const created = await createRes.json();
+    const nid = created.data.nid;
+
+    // Visit the public node page
+    await page.goto(`/node/${nid}`);
+    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toBeVisible();
+    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText('Home');
+    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText('Breadcrumb Test Article');
+  });
+
+  test('should show breadcrumbs on search page', async ({ page }) => {
+    await page.goto('/search');
+    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toBeVisible();
+    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText('Home');
+    await expect(page.locator('nav[aria-label="Breadcrumb"]')).toContainText('Search');
+  });
+});
+
+test.describe('Admin Toolbar Navigation', () => {
+  test('should show scheduled link in content dropdown', async ({ authenticatedPage: page }) => {
+    await page.goto('/content');
+    // Check for the secondary nav tabs
+    await expect(page.getByText('All content')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Scheduled' })).toBeVisible();
   });
 });

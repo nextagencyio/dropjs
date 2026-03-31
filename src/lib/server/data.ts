@@ -301,6 +301,12 @@ export async function getStatusReport() {
   };
 }
 
+export async function getCacheStats(): Promise<Record<string, { size: number; tags: number }>> {
+  await ensureInitialized();
+  const { cacheStats } = await import('../../core/cache');
+  return cacheStats();
+}
+
 // ── Watchdog / Logs ─────────────────────────────────────────────────
 
 export interface LogEntry {

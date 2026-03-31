@@ -1274,3 +1274,20 @@ export async function deleteRedirectAction(id: number): Promise<ActionResult> {
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Cache ────────────────────────────────────────────────────────────
+
+export async function clearAllCaches(): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { cacheClearAll } = await import('../../../core/cache');
+    cacheClearAll();
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

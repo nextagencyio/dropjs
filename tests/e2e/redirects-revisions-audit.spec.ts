@@ -306,3 +306,19 @@ test.describe('Admin Toolbar Navigation', () => {
     await expect(page.getByRole('link', { name: 'Scheduled' })).toBeVisible();
   });
 });
+
+test.describe('Status Report & Cache', () => {
+  test('should show status report with cache stats', async ({ authenticatedPage: page }) => {
+    await page.goto('/reports/status');
+    await expect(page.getByRole('heading', { name: 'Status report' })).toBeVisible();
+    await expect(page.getByText('drop.js version')).toBeVisible();
+    await expect(page.getByText('Cache statistics')).toBeVisible();
+    await expect(page.getByText('Active bins')).toBeVisible();
+    await expect(page.getByText('Cached items')).toBeVisible();
+  });
+
+  test('should have clear cache button', async ({ authenticatedPage: page }) => {
+    await page.goto('/reports/status');
+    await expect(page.getByRole('button', { name: 'Clear all caches' })).toBeVisible();
+  });
+});

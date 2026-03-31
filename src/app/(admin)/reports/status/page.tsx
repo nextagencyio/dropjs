@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { getStatusReport } from '@/lib/server/data';
+import { getStatusReport, getCacheStats } from '@/lib/server/data';
+import { ClearCacheButton } from './clear-cache-button';
 
 function formatUptime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -76,13 +77,20 @@ const dotColors: Record<StatusColor, string> = {
 
 export default async function StatusReportPage() {
   let report: Awaited<ReturnType<typeof getStatusReport>> | null = null;
+  let cacheInfo: Record<string, { size: number; tags: number }> = {};
   let error = '';
 
   try {
-    report = await getStatusReport();
+    [report, cacheInfo] = await Promise.all([
+      getStatusReport(),
+      getCacheStats(),
+    ]);
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to load status report';
   }
+
+  const totalCacheItems = Object.values(cacheInfo).reduce((sum, bin) => sum + bin.size, 0);
+  const totalCacheTags = Object.values(cacheInfo).reduce((sum, bin) => sum + bin.tags, 0);
 
   return (
     <div>
@@ -97,9 +105,12 @@ export default async function StatusReportPage() {
         <span className="text-sm text-gin-text-light">Status report</span>
       </div>
 
-      <h1 className="text-[28px] font-normal tracking-tight mb-5 text-gin-title">
-        Status report
-      </h1>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-[28px] font-normal tracking-tight text-gin-title">
+          Status report
+        </h1>
+        <ClearCacheButton />
+      </div>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-gin-s text-sm">
@@ -139,6 +150,62 @@ export default async function StatusReportPage() {
           </table>
         </div>
       ) : null}
+
+      {/* Cache statistics */}
+      <h2 className="text-lg font-semibold text-gin-title mt-8 mb-4">
+        Cache statistics
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white border border-gin-border rounded-gin p-4">
+          <div className="text-2xl font-bold text-gin-primary tabular-nums">{Object.keys(cacheInfo).length}</div>
+          <div className="text-sm text-gin-text-light mt-1">Active bins</div>
+        </div>
+        <div className="bg-white border border-gin-border rounded-gin p-4">
+          <div className="text-2xl font-bold text-gin-primary tabular-nums">{totalCacheItems}</div>
+          <div className="text-sm text-gin-text-light mt-1">Cached items</div>
+        </div>
+        <div className="bg-white border border-gin-border rounded-gin p-4">
+          <div className="text-2xl font-bold text-gin-primary tabular-nums">{totalCacheTags}</div>
+          <div className="text-sm text-gin-text-light mt-1">Cache tags</div>
+        </div>
+      </div>
+
+      {Object.keys(cacheInfo).length > 0 && (
+        <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">
+          <table className="w-full text-sm min-w-[400px]">
+            <thead>
+              <tr className="border-b border-gin-border-table bg-gin-bg-layer2">
+                <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">
+                  Bin
+                </th>
+                <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-28">
+                  Items
+                </th>
+                <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-28">
+                  Tags
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gin-border-table">
+              {Object.entries(cacheInfo)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, stats]) => (
+                  <tr key={name} className="hover:bg-gin-primary-light transition-colors">
+                    <td className="px-4 py-3 font-medium text-gin-title font-mono text-xs">
+                      {name}
+                    </td>
+                    <td className="px-4 py-3 text-gin-text tabular-nums">
+                      {stats.size}
+                    </td>
+                    <td className="px-4 py-3 text-gin-text tabular-nums">
+                      {stats.tags}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

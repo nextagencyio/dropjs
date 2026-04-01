@@ -52,6 +52,14 @@ export interface AuditLogQueryOptions {
   offset?: number;
 }
 
+export interface AuditLogFilterOptions {
+  action?: string;
+  entity_type?: string;
+  uid?: number;
+  limit?: number;
+  offset?: number;
+}
+
 // ---------------------------------------------------------------------------
 // CRUD
 // ---------------------------------------------------------------------------
@@ -99,6 +107,25 @@ export async function getRecentAuditLog(
     .select('audit_log')
     .orderBy('timestamp', 'DESC')
     .range(0, limit)
+    .execute<AuditLogEntry>();
+
+  return rows;
+}
+
+export async function queryAuditLog(
+  filters: AuditLogFilterOptions = {},
+): Promise<AuditLogEntry[]> {
+  const limit = filters.limit ?? 100;
+  const offset = filters.offset ?? 0;
+
+  let query = db.select('audit_log');
+  if (filters.action) query = query.condition('action', filters.action);
+  if (filters.entity_type) query = query.condition('entity_type', filters.entity_type);
+  if (filters.uid !== undefined) query = query.condition('uid', filters.uid);
+
+  const rows = await query
+    .orderBy('timestamp', 'DESC')
+    .range(offset, limit)
     .execute<AuditLogEntry>();
 
   return rows;

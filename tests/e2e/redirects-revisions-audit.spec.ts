@@ -204,7 +204,8 @@ test.describe('Audit Log', () => {
 
     // Should show at least one entry in the table
     await expect(page.getByRole('table')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Created').first()).toBeVisible();
+    // Look for a "Created" badge inside the table body (not the filter dropdown)
+    await expect(page.locator('tbody').getByText('Created').first()).toBeVisible();
   });
 
   test('should show audit entries on node edit page', async ({ authenticatedPage: page }) => {

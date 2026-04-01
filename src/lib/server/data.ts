@@ -76,7 +76,9 @@ import {
 import {
   getRecentAuditLog,
   getAuditLog,
+  queryAuditLog,
   type AuditLogEntry,
+  type AuditLogFilterOptions,
 } from '../../core/audit-log';
 
 // ── Entity Data ─────────────────────────────────────────────────────
@@ -1160,6 +1162,13 @@ export async function searchContent(query: string, limit: number = 50): Promise<
 export async function getRecentAuditEntries(limit: number = 50): Promise<AuditLogEntry[]> {
   await ensureInitialized();
   return getRecentAuditLog(limit);
+}
+
+export async function getFilteredAuditEntries(
+  filters: AuditLogFilterOptions
+): Promise<AuditLogEntry[]> {
+  await ensureInitialized();
+  return queryAuditLog(filters);
 }
 
 export async function getEntityAuditEntries(

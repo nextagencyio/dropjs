@@ -9,7 +9,7 @@ const reports = [
   {
     title: 'Available updates',
     description: 'Check for available updates.',
-    href: '',
+    href: '/reports/updates',
   },
   {
     title: 'Recent log messages',

@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CircleAlert, Loader2 } from 'lucide-react';
+import { registerAccount } from '../_actions';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,18 +20,12 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const result = await signIn('credentials', {
-      name,
-      password,
-      redirect: false,
-    });
-
-    if (result?.error) {
-      setError('Invalid username or password');
-      setLoading(false);
+    const result = await registerAccount(name, email, password);
+    if (result.success) {
+      router.push('/login?registered=1');
     } else {
-      router.push('/');
-      router.refresh();
+      setError(result.error || 'Registration failed');
+      setLoading(false);
     }
   };
 
@@ -41,8 +36,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center mb-3 sm:mb-5">
             <Image src="/logo.png" alt="drop.js" width={56} height={77} className="drop-shadow-sm sm:w-[72px] sm:h-[99px]" priority />
           </div>
-          <h1 className="text-[22px] sm:text-[26px] font-bold text-gin-title tracking-tight leading-tight">drop.js</h1>
-          <p className="text-sm mt-1.5 sm:mt-2 text-gin-text-light font-medium">Log in to your account</p>
+          <h1 className="text-[22px] sm:text-[26px] font-bold text-gin-title tracking-tight leading-tight">Create account</h1>
+          <p className="text-sm mt-1.5 sm:mt-2 text-gin-text-light font-medium">Register for a new account</p>
         </div>
 
         {error && (
@@ -64,7 +59,22 @@ export default function LoginPage() {
               onChange={(e) => setName(e.target.value)}
               required
               autoFocus
-              placeholder="Enter your username"
+              placeholder="Choose a username"
+              className="w-full rounded-gin-s px-3.5 py-2.5 text-sm text-gin-text border border-gin-border-form bg-gin-bg-layer placeholder:text-gin-text-light/60 focus:border-gin-primary focus:ring-2 focus:ring-gin-primary/10 focus:outline-none transition-all duration-200"
+            />
+          </div>
+
+          <div className="mb-4 sm:mb-5">
+            <label htmlFor="email" className="block text-[13px] font-semibold text-gin-title mb-1.5 sm:mb-2">
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="Enter your email"
               className="w-full rounded-gin-s px-3.5 py-2.5 text-sm text-gin-text border border-gin-border-form bg-gin-bg-layer placeholder:text-gin-text-light/60 focus:border-gin-primary focus:ring-2 focus:ring-gin-primary/10 focus:outline-none transition-all duration-200"
             />
           </div>
@@ -79,7 +89,8 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="Enter your password"
+              minLength={8}
+              placeholder="At least 8 characters"
               className="w-full rounded-gin-s px-3.5 py-2.5 text-sm text-gin-text border border-gin-border-form bg-gin-bg-layer placeholder:text-gin-text-light/60 focus:border-gin-primary focus:ring-2 focus:ring-gin-primary/10 focus:outline-none transition-all duration-200"
             />
           </div>
@@ -92,20 +103,17 @@ export default function LoginPage() {
             {loading ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="animate-spin h-4 w-4" />
-                Logging in...
+                Creating account...
               </span>
             ) : (
-              'Log in'
+              'Create account'
             )}
           </button>
         </form>
 
-        <div className="mt-5 flex items-center justify-between text-sm">
-          <Link href="/forgot-password" className="text-gin-primary hover:underline font-medium">
-            Forgot password?
-          </Link>
-          <Link href="/register" className="text-gin-primary hover:underline font-medium">
-            Create account
+        <div className="mt-6 text-center">
+          <Link href="/login" className="text-sm text-gin-primary hover:underline font-medium">
+            Already have an account? Log in
           </Link>
         </div>
       </div>

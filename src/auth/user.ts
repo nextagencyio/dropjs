@@ -1,5 +1,6 @@
 import { db, schema as dbSchema } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
 import { hashPassword, verifyPassword } from './password.js';
 import {
   USER_TABLE,
@@ -251,4 +252,61 @@ export async function authenticateUser(
 
   const roles = await loadUserRoles(row.uid as number);
   return rowToUserData(row, roles);
+}
+
+// ─── Password Reset ────────────────────────────────────────────
+
+export async function createPasswordResetToken(uid: number): Promise<string> {
+  const token = randomBytes(48).toString('hex');
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + 86400; // 24 hours
+
+  await db
+    .insert('password_resets')
+    .values({ uid, token, created: now, expires, used: 0 })
+    .execute();
+
+  return token;
+}
+
+export async function validatePasswordResetToken(
+  token: string
+): Promise<{ uid: number } | null> {
+  const rows = await db
+    .select('password_resets')
+    .fields(['uid', 'expires', 'used'])
+    .condition('token', token)
+    .execute<{ uid: number; expires: number; used: number }>();
+
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  const now = Math.floor(Date.now() / 1000);
+  if (row.used || row.expires < now) return null;
+  return { uid: row.uid };
+}
+
+export async function resetPasswordWithToken(
+  token: string,
+  newPassword: string
+): Promise<boolean> {
+  const result = await validatePasswordResetToken(token);
+  if (!result) return false;
+
+  const passwordHash = await hashPassword(newPassword);
+  const now = Math.floor(Date.now() / 1000);
+
+  await db
+    .update('users_field_data')
+    .set({ pass: passwordHash, changed: now })
+    .condition('uid', result.uid)
+    .execute();
+
+  // Mark token as used
+  await db
+    .update('password_resets')
+    .set({ used: 1 })
+    .condition('token', token)
+    .execute();
+
+  return true;
 }

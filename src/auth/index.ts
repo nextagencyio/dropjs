@@ -9,6 +9,9 @@ export {
   deleteUser,
   authenticateUser,
   ensureAuthTables,
+  createPasswordResetToken,
+  validatePasswordResetToken,
+  resetPasswordWithToken,
 } from './user.js';
 export type { UserData, UserCreateInput } from './user.js';
 

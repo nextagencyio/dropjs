@@ -1,4 +1,4 @@
-import { getEntityTypes, listEntities, type EntityData } from '@/lib/server/data';
+import { getEntityTypes, listEntities, listUsers, type EntityData } from '@/lib/server/data';
 import { requireAuth } from '@/lib/server/auth';
 import ContentListClient, { type ContentEntity } from './_components/content-list-client';
 
@@ -12,12 +12,17 @@ export default async function ContentListPage({
   const params = await searchParams;
   const typeFilter = (typeof params.type === 'string' ? params.type : '') ?? '';
   const statusFilter = (typeof params.status === 'string' ? params.status : '') ?? '';
+  const authorFilter = (typeof params.author === 'string' ? params.author : '') ?? '';
   const search = (typeof params.search === 'string' ? params.search : '') ?? '';
   const offset = parseInt(typeof params.offset === 'string' ? params.offset : '0', 10) || 0;
   const limit = 50;
 
-  const allTypes = await getEntityTypes();
+  const [allTypes, usersResult] = await Promise.all([
+    getEntityTypes(),
+    listUsers(),
+  ]);
   const nodeTypes = allTypes.filter((t) => t.entity_type === 'node');
+  const users = usersResult.data;
 
   const typesToFetch = typeFilter
     ? nodeTypes.filter((t) => t.bundle === typeFilter)
@@ -31,6 +36,7 @@ export default async function ContentListPage({
       const filters: Record<string, string> = {};
       if (statusFilter === '1') filters.status = '1';
       if (statusFilter === '0') filters.status = '0';
+      if (authorFilter) filters.uid = authorFilter;
 
       const res = await listEntities(t.entity_type, t.bundle, {
         offset: typesToFetch.length === 1 ? offset : 0,
@@ -71,9 +77,11 @@ export default async function ContentListPage({
       types={allTypes}
       entities={entities}
       total={allTotal}
+      users={users.map((u) => ({ uid: u.uid!, name: u.name }))}
       searchParams={{
         type: typeFilter,
         status: statusFilter,
+        author: authorFilter,
         search,
         offset,
       }}

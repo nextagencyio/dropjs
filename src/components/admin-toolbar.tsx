@@ -72,6 +72,7 @@ const menuItems: MenuItem[] = [
       { href: '/config/url-aliases', label: 'URL aliases' },
       { href: '/config/redirects', label: 'URL redirects' },
       { href: '/config/languages', label: 'Languages' },
+      { href: '/config/sync', label: 'Config sync' },
     ],
   },
   {

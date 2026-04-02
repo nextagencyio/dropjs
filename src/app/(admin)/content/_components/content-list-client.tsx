@@ -34,19 +34,26 @@ export interface ContentEntity extends EntityData {
   _label: string;
 }
 
+interface UserOption {
+  uid: number;
+  name: string;
+}
+
 interface ContentListClientProps {
   types: EntityTypeDefinition[];
   entities: ContentEntity[];
   total: number;
+  users: UserOption[];
   searchParams: {
     type: string;
     status: string;
+    author: string;
     search: string;
     offset: number;
   };
 }
 
-export default function ContentListClient({ types, entities: initialEntities, total, searchParams: params }: ContentListClientProps) {
+export default function ContentListClient({ types, entities: initialEntities, total, users, searchParams: params }: ContentListClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -54,7 +61,7 @@ export default function ContentListClient({ types, entities: initialEntities, to
   const [batchRunning, setBatchRunning] = useState(false);
   const [openOps, setOpenOps] = useState<number | null>(null);
 
-  const { type: typeFilter, status: statusFilter, search, offset } = params;
+  const { type: typeFilter, status: statusFilter, author: authorFilter, search, offset } = params;
   const limit = 50;
   const entities = initialEntities;
   const nodeTypes = types.filter((t) => t.entity_type === 'node');
@@ -213,6 +220,20 @@ export default function ContentListClient({ types, entities: initialEntities, to
             <option value="0">Unpublished</option>
           </select>
         </div>
+        <div>
+          <label htmlFor="author-filter" className="sr-only">Author</label>
+          <select
+            id="author-filter"
+            value={authorFilter}
+            onChange={(e) => setParam('author', e.target.value)}
+            className="border border-gin-border-form rounded-gin-s px-3 py-1.5 text-sm text-gin-text focus:outline-none focus:ring-1 focus:ring-gin-primary focus:border-gin-primary"
+          >
+            <option value="">- Any author -</option>
+            {users.map((u) => (
+              <option key={u.uid} value={String(u.uid)}>{u.name}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Batch actions */}
         {selected.size > 0 && (
@@ -268,6 +289,7 @@ export default function ContentListClient({ types, entities: initialEntities, to
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">Title</th>
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-36">Content type</th>
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-32">Status</th>
+                  <th className="px-4 py-3 text-left text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-28">Author</th>
                   <th className="px-4 py-3 text-left text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-32">Updated</th>
                   <th className="px-4 py-3 text-right text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-28">Operations</th>
                 </tr>
@@ -304,6 +326,9 @@ export default function ContentListClient({ types, entities: initialEntities, to
                           Draft
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-gin-text-light text-[13px]">
+                      {users.find((u) => u.uid === Number(item.uid))?.name || item.uid || '\u2014'}
                     </td>
                     <td className="px-4 py-3 text-gin-text-light text-[13px]">
                       {formatDate(item.changed)}

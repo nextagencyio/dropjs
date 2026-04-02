@@ -1267,5 +1267,30 @@ export async function getRedirects(options?: {
   return listRedirects(options) as Promise<{ redirects: RedirectEntry[]; total: number }>;
 }
 
+// ── Config Sync ──────────────────────────────────────────────────────
+
+export async function exportConfig(): Promise<Record<string, Record<string, unknown>>> {
+  await ensureInitialized();
+  const { exportAllConfig } = await import('../../core/config-sync');
+  return exportAllConfig();
+}
+
+export async function importConfigData(
+  configs: Record<string, Record<string, unknown>>
+): Promise<void> {
+  await ensureInitialized();
+  const { importConfig } = await import('../../core/config-sync');
+  await importConfig(configs);
+}
+
+export async function diffConfigData(
+  incoming: Record<string, Record<string, unknown>>
+): Promise<{ added: string[]; changed: string[]; removed: string[] }> {
+  await ensureInitialized();
+  const { exportAllConfig, diffConfig } = await import('../../core/config-sync');
+  const current = await exportAllConfig();
+  return diffConfig(current, incoming);
+}
+
 // Re-export types for convenience
 export type { EntityData, EntityTypeDefinition, ViewDefinition, ViewResult, BlockPlacement, BlockDefinition, RegionDefinition, UrlAlias, Webhook, ContactForm, ContactMessage, ShortcutSet, Shortcut, ParagraphType, FieldGroup, PathautoPattern, RoleConfig, AuditLogEntry };

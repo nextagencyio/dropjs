@@ -69,6 +69,11 @@ const categories = [
         description: 'Manage REST resource plugins that provide custom API endpoints',
         to: '/config/rest-resources',
       },
+      {
+        label: 'GraphQL playground',
+        description: 'Interactive GraphQL API explorer',
+        to: '/api/graphql',
+      },
     ],
   },
   {
@@ -95,9 +100,19 @@ const categories = [
     title: 'Development',
     items: [
       {
+        label: 'Configuration synchronization',
+        description: 'Export, compare, and import site configuration',
+        to: '/config/sync',
+      },
+      {
         label: 'Logging and errors',
         description: 'Site reports and status',
         to: '/reports/status',
+      },
+      {
+        label: 'API documentation',
+        description: 'OpenAPI/Swagger documentation for the REST API',
+        to: '/api/docs',
       },
     ],
   },

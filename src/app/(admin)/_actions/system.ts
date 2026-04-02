@@ -1291,3 +1291,51 @@ export async function clearAllCaches(): Promise<ActionResult> {
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Config Sync ──────────────────────────────────────────────────
+
+export async function exportAllConfiguration(): Promise<ActionResult<string>> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { exportAllConfig } = await import('../../../core/config-sync');
+    const configs = await exportAllConfig();
+    return { success: true, data: JSON.stringify(configs, null, 2) };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function importConfiguration(jsonStr: string): Promise<ActionResult<{ added: string[]; changed: string[]; removed: string[] }>> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const configs = JSON.parse(jsonStr) as Record<string, Record<string, unknown>>;
+    const { importConfig } = await import('../../../core/config-sync');
+    await importConfig(configs);
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function diffConfiguration(jsonStr: string): Promise<ActionResult<{ added: string[]; changed: string[]; removed: string[] }>> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const incoming = JSON.parse(jsonStr) as Record<string, Record<string, unknown>>;
+    const { exportAllConfig, diffConfig } = await import('../../../core/config-sync');
+    const current = await exportAllConfig();
+    const diff = diffConfig(current, incoming);
+    return { success: true, data: diff };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

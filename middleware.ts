@@ -12,7 +12,7 @@ export default auth(async (req) => {
   // The admin layout already checks auth server-side, but middleware gives a faster redirect
   const adminPaths = [
     '/content', '/people', '/roles', '/structure', '/config',
-    '/appearance', '/extend', '/media', '/reports',
+    '/appearance', '/extend', '/media', '/reports', '/user/edit',
   ];
   const isAdminRoute = adminPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
   // Also protect the root / which is the admin dashboard

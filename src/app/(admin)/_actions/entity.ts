@@ -424,3 +424,38 @@ export async function reorderFields(
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Manage Display ──────────────────────────────────────────────────
+
+export async function saveViewDisplayAction(
+  entityType: string,
+  bundle: string,
+  mode: string,
+  fields: Record<string, { label: string; formatter: string; weight: number; visible: boolean; formatter_settings?: Record<string, unknown> }>,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer content types');
+  if (!auth.success) return auth;
+
+  try {
+    const { saveViewDisplay, getOrCreateViewDisplay } = await import('../../../core/display-modes');
+    const existing = await getOrCreateViewDisplay(entityType, bundle, mode);
+
+    for (const [name, update] of Object.entries(fields)) {
+      existing.fields[name] = {
+        field: name,
+        label: update.label as 'above' | 'inline' | 'hidden' | 'visually_hidden',
+        formatter: update.formatter,
+        formatter_settings: update.formatter_settings ?? {},
+        weight: update.weight,
+        visible: update.visible,
+      };
+    }
+
+    await saveViewDisplay(existing);
+    revalidatePath(`/structure/types/${entityType}/${bundle}/display`);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

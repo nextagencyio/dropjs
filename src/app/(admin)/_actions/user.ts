@@ -119,3 +119,49 @@ export async function updateRolePermissions(
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Self-edit (logged-in user edits own profile) ──────────────────
+
+export async function updateOwnProfile(changes: {
+  email?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}): Promise<ActionResult> {
+  await ensureInitialized();
+  const user = await getSessionUser();
+  if (!user || !user.uid) return { success: false, error: 'Authentication required' };
+
+  try {
+    const updates: Partial<UserCreateInput> = {};
+
+    if (changes.email && changes.email !== user.email) {
+      updates.email = changes.email;
+    }
+
+    if (changes.newPassword) {
+      if (!changes.currentPassword) {
+        return { success: false, error: 'Current password is required to set a new password' };
+      }
+      // Verify current password
+      const { authenticateUser } = await import('../../../auth/user');
+      const authed = await authenticateUser(user.name, changes.currentPassword);
+      if (!authed) {
+        return { success: false, error: 'Current password is incorrect' };
+      }
+      if (changes.newPassword.length < 8) {
+        return { success: false, error: 'New password must be at least 8 characters' };
+      }
+      updates.password = changes.newPassword;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return { success: true };
+    }
+
+    await coreUpdateUser(user.uid, updates);
+    revalidatePath('/user/edit');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

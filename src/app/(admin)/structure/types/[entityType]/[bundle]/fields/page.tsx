@@ -79,10 +79,23 @@ export default async function ContentTypeFieldsPage({
           + Add field
         </Link>
       </div>
-      <p className="text-sm text-gin-text-light mb-5">
+      <p className="text-sm text-gin-text-light mb-3">
         {definition.entity_type}:{definition.bundle}
         {definition.description && ` -- ${definition.description}`}
       </p>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-5 border-b border-gin-border">
+        <span className="inline-flex items-center px-4 py-2 text-sm font-medium text-gin-primary border-b-2 border-gin-primary -mb-px">
+          Manage fields
+        </span>
+        <Link
+          href={`/structure/types/${entityType}/${bundle}/display`}
+          className="inline-flex items-center px-4 py-2 text-sm font-medium text-gin-text-light border-b-2 border-transparent hover:text-gin-text hover:border-gin-border -mb-px transition-colors"
+        >
+          Manage display
+        </Link>
+      </div>
 
       <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">
         <table className="w-full text-sm min-w-[500px]">

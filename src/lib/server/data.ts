@@ -1109,6 +1109,28 @@ export interface CommentSummary {
   author_name?: string;
 }
 
+export async function getAllComments(options?: { status?: number; limit?: number }): Promise<CommentSummary[]> {
+  await ensureInitialized();
+  const { listAllComments } = await import('../../core/comments');
+  const comments = await listAllComments({
+    status: options?.status,
+    limit: options?.limit ?? 100,
+  });
+  return comments.map((c) => ({
+    cid: c.cid,
+    entity_type: c.entity_type,
+    entity_id: c.entity_id,
+    uid: c.uid,
+    subject: c.subject,
+    comment_body: (c as any).comment_body ?? '',
+    created: c.created,
+    status: c.status,
+    pid: c.parent_cid > 0 ? c.parent_cid : null,
+    thread: c.thread,
+    author_name: c.name ?? undefined,
+  }));
+}
+
 export async function getComments(entityType: string, entityId: number): Promise<CommentSummary[]> {
   await ensureInitialized();
   const { loadComments } = await import('../../core/comments');
@@ -1265,6 +1287,20 @@ export async function getRedirects(options?: {
   await ensureInitialized();
   const { listRedirects } = await import('../../core/redirect.js');
   return listRedirects(options) as Promise<{ redirects: RedirectEntry[]; total: number }>;
+}
+
+// ── Display Modes ────────────────────────────────────────────────────
+
+export async function getViewDisplay(entityType: string, bundle: string, mode: string) {
+  await ensureInitialized();
+  const { getOrCreateViewDisplay } = await import('../../core/display-modes');
+  return getOrCreateViewDisplay(entityType, bundle, mode);
+}
+
+export async function getViewModes(entityType: string) {
+  await ensureInitialized();
+  const { listViewModes } = await import('../../core/display-modes');
+  return listViewModes(entityType);
 }
 
 // ── Config Sync ──────────────────────────────────────────────────────

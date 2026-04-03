@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Search, FileText, ChevronDown, Trash2, Calendar } from 'lucide-react';
+import { Plus, Search, FileText, ChevronDown, Trash2, Calendar, MessageSquare } from 'lucide-react';
 import { deleteEntity, updateEntity } from '@/app/(admin)/_actions/entity';
 
 interface EntityTypeDefinition {
@@ -169,6 +169,13 @@ export default function ContentListClient({ types, entities: initialEntities, to
           <FileText className="w-4 h-4" />
           All content
         </span>
+        <Link
+          href="/content/comments"
+          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gin-text-light hover:text-gin-text border-b-2 border-transparent hover:border-gin-border -mb-px transition-colors"
+        >
+          <MessageSquare className="w-4 h-4" />
+          Comments
+        </Link>
         <Link
           href="/content/scheduled"
           className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gin-text-light hover:text-gin-text border-b-2 border-transparent hover:border-gin-border -mb-px transition-colors"

@@ -46,6 +46,7 @@ const menuItems: MenuItem[] = [
     icon: icons.content,
     dropdown: [
       { href: '/content', label: 'Content' },
+      { href: '/content/comments', label: 'Comments' },
       { href: '/content/scheduled', label: 'Scheduled' },
       { href: '/media', label: 'Media' },
     ],
@@ -232,12 +233,21 @@ export function AdminToolbar({ user, logout }: AdminToolbarProps) {
               }`}
             >
               <div className="text-sm font-medium truncate text-gin-title leading-tight">{user.name}</div>
-              <button
-                onClick={logout}
-                className="text-xs text-gin-text-light hover:text-gin-danger transition-colors"
-              >
-                Log out
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/user/edit"
+                  className="text-xs text-gin-text-light hover:text-gin-primary transition-colors"
+                >
+                  Edit profile
+                </Link>
+                <span className="text-xs text-gin-border">&middot;</span>
+                <button
+                  onClick={logout}
+                  className="text-xs text-gin-text-light hover:text-gin-danger transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
             </div>
           </div>
         )}

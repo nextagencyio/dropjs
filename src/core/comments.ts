@@ -350,6 +350,53 @@ export async function updateComment(
 /**
  * Delete a comment from both tables.
  */
+/**
+ * List all comments across all entities, for admin moderation.
+ */
+export async function listAllComments(options?: {
+  limit?: number;
+  offset?: number;
+  status?: number;
+}): Promise<CommentData[]> {
+  let query = db
+    .select(COMMENT_TABLE, 'c')
+    .join(COMMENT_FIELD_DATA_TABLE, 'cfd', 'c.cid = cfd.cid')
+    .fields('c', ['cid', 'comment_type', 'uuid', 'langcode'])
+    .fields('cfd', [
+      'status', 'uid', 'entity_type', 'entity_id',
+      'subject', 'name', 'mail', 'homepage',
+      'thread', 'parent_cid', 'created', 'changed',
+    ])
+    .orderBy('cfd.created', 'DESC');
+
+  if (options?.status !== undefined) {
+    query = query.condition('cfd.status', options.status);
+  }
+
+  query = query.range(options?.offset ?? 0, options?.limit ?? 100);
+
+  const rows = await query.execute<Record<string, unknown>>();
+
+  return rows.map((row) => ({
+    cid: row.cid as number,
+    comment_type: row.comment_type as string,
+    uuid: row.uuid as string,
+    langcode: row.langcode as string,
+    status: row.status as number,
+    uid: row.uid as number,
+    entity_type: row.entity_type as string,
+    entity_id: row.entity_id as number,
+    subject: row.subject as string | null,
+    name: row.name as string | null,
+    mail: row.mail as string | null,
+    homepage: row.homepage as string | null,
+    thread: row.thread as string,
+    parent_cid: row.parent_cid as number,
+    created: row.created as number,
+    changed: row.changed as number,
+  }));
+}
+
 export async function deleteComment(cid: number): Promise<void> {
   await EventBus.emit('comment:delete', { cid });
 

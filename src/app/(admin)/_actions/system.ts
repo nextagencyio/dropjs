@@ -1339,3 +1339,84 @@ export async function diffConfiguration(jsonStr: string): Promise<ActionResult<{
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Search ──────────────────────────────────────────────────────────
+
+export async function rebuildSearchIndexAction(): Promise<ActionResult<{ count: number }>> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { rebuildSearchIndex } = await import('../../../core/search');
+    const count = await rebuildSearchIndex();
+    return { success: true, data: { count } };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── Cron ────────────────────────────────────────────────────────────
+
+export async function runCronAction(): Promise<ActionResult<{ ran: string[]; errors: string[] }>> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer site configuration');
+  if (!auth.success) return auth;
+
+  try {
+    const { runCron } = await import('../../../core/cron');
+    const result = await runCron();
+    revalidatePath('/config/cron');
+    return { success: true, data: result };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── Translations ────────────────────────────────────────────────────
+
+export async function createTranslationAction(
+  entityType: string,
+  id: number,
+  langcode: string,
+  data: Record<string, unknown>,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('translate content');
+  if (!auth.success) {
+    // Fall back to edit permission
+    const editAuth = await requirePerm('edit any content');
+    if (!editAuth.success) return editAuth;
+  }
+
+  try {
+    const { createTranslation } = await import('../../../core/translation');
+    const entity = await createTranslation(entityType, id, langcode, data);
+    revalidatePath(`/node/${id}/translations`);
+    return { success: true, data: entity?.toJSON() };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+export async function deleteTranslationAction(
+  entityType: string,
+  id: number,
+  langcode: string,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('translate content');
+  if (!auth.success) {
+    const editAuth = await requirePerm('edit any content');
+    if (!editAuth.success) return editAuth;
+  }
+
+  try {
+    const { deleteTranslation } = await import('../../../core/translation');
+    await deleteTranslation(entityType, id, langcode);
+    revalidatePath(`/node/${id}/translations`);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

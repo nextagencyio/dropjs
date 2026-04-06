@@ -59,6 +59,10 @@ import {
 } from '../../core/module-loader';
 import {
   getLanguages,
+  getEnabledLanguages,
+  getTranslationStatus,
+  type Language,
+  type TranslationInfo,
 } from '../../core/translation';
 import {
   getPathautoPatterns,
@@ -776,6 +780,55 @@ export async function getFieldLayout(entityType: string, bundle: string, viewMod
 export async function getLanguagesList() {
   await ensureInitialized();
   return getLanguages();
+}
+
+export async function getEnabledLanguagesList(): Promise<Language[]> {
+  await ensureInitialized();
+  return getEnabledLanguages();
+}
+
+export async function getTranslationStatusForEntity(
+  entityType: string,
+  id: number,
+): Promise<TranslationInfo[]> {
+  await ensureInitialized();
+  return getTranslationStatus(entityType, id);
+}
+
+// ── Search ─────────────────────────────────────────────────────────
+
+export async function getSearchStatus(): Promise<{
+  backend: string;
+  available: boolean;
+  indexedCount: number;
+}> {
+  await ensureInitialized();
+  const { getActiveSearchBackend, isFtsAvailable } = await import('../../core/search');
+  const conn = (await import('../../db/index')).getConnection();
+  let indexedCount = 0;
+  try {
+    const backend = getActiveSearchBackend();
+    if (backend === 'fts5') {
+      const rows = await conn.raw('SELECT COUNT(*) as cnt FROM search_index');
+      indexedCount = (rows as any[])[0]?.cnt ?? 0;
+    } else if (backend === 'pg') {
+      const result = await conn.raw('SELECT COUNT(*) as cnt FROM search_index');
+      indexedCount = Number(result.rows?.[0]?.cnt ?? 0);
+    }
+  } catch { /* table may not exist */ }
+  return {
+    backend: getActiveSearchBackend(),
+    available: isFtsAvailable(),
+    indexedCount,
+  };
+}
+
+// ── Cron ────────────────────────────────────────────────────────────
+
+export async function getCronJobsList() {
+  await ensureInitialized();
+  const { getCronJobs } = await import('../../core/cron');
+  return getCronJobs();
 }
 
 // ── Pathauto ────────────────────────────────────────────────────────

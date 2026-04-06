@@ -80,6 +80,11 @@ const categories = [
     title: 'Automation',
     items: [
       {
+        label: 'Cron management',
+        description: 'View registered cron jobs and manually run cron',
+        to: '/config/cron',
+      },
+      {
         label: 'Actions & Triggers',
         description: 'Configure automated actions triggered by system events',
         to: '/config/actions',
@@ -119,6 +124,11 @@ const categories = [
   {
     title: 'Search and metadata',
     items: [
+      {
+        label: 'Search settings',
+        description: 'Configure full-text search indexing and rebuild the search index',
+        to: '/config/search',
+      },
       {
         label: 'URL aliases',
         description: 'Manage URL path aliases',

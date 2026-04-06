@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ChevronRight, Clock, FileText, Calendar } from 'lucide-react';
+import { ChevronRight, Clock, FileText, Calendar, Globe } from 'lucide-react';
 import { EntityForm } from '@/components/entity-form';
 import { ContentLockBanner } from '@/components/content-lock-banner';
 import { setSchedule, cancelSchedule } from '../../../_actions/entity';
@@ -112,6 +112,13 @@ export function NodeEditForm({
                 {revisionCount}
               </span>
             )}
+          </Link>
+          <Link
+            href={`/node/${id}/translations`}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gin-text bg-white border border-gin-border rounded-gin-s hover:bg-gin-bg-layer2 transition-colors"
+          >
+            <Globe className="w-4 h-4 text-gin-text-light" />
+            Translations
           </Link>
         </div>
       </div>

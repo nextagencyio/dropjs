@@ -459,3 +459,108 @@ export async function saveViewDisplayAction(
     return { success: false, error: (err as Error).message };
   }
 }
+
+// ── Content Export ──────────────────────────────────────────────────
+
+export async function exportContentAction(
+  bundle: string,
+): Promise<ActionResult<string>> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer nodes');
+  if (!auth.success) return auth;
+
+  try {
+    const { EntityQuery } = await import('../../../core/entity-query');
+    const query = new EntityQuery('node');
+    query.condition('type', bundle);
+    query.sort('nid', 'ASC');
+    const ids = await query.execute();
+
+    const entities: Record<string, unknown>[] = [];
+    for (const id of ids) {
+      const entity = await Entity.load('node', id);
+      if (entity) {
+        const data = entity.toJSON();
+        // Remove internal-only fields
+        delete data.uuid;
+        delete data.default_langcode;
+        delete data.revision_translation_affected;
+        entities.push(data);
+      }
+    }
+
+    return { success: true, data: JSON.stringify(entities, null, 2) };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+// ── Content Import ──────────────────────────────────────────────────
+
+export async function importContentAction(
+  jsonStr: string,
+): Promise<ActionResult<{ created: number; errors: string[] }>> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer nodes');
+  if (!auth.success) return auth;
+
+  try {
+    const items = JSON.parse(jsonStr);
+    if (!Array.isArray(items)) {
+      return { success: false, error: 'JSON must be an array of entities' };
+    }
+
+    let created = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      try {
+        const bundle = item.type;
+        if (!bundle) {
+          errors.push(`Item ${i}: missing "type" field`);
+          continue;
+        }
+
+        const def = getEntityTypeDefinition('node', bundle);
+        if (!def) {
+          errors.push(`Item ${i}: unknown content type "${bundle}"`);
+          continue;
+        }
+
+        const title = item.title;
+        if (!title) {
+          errors.push(`Item ${i}: missing "title" field`);
+          continue;
+        }
+
+        // Collect field values (skip base fields)
+        const baseFields = new Set(['nid', 'vid', 'type', 'title', 'status', 'uid', 'created', 'changed', 'promote', 'sticky', 'langcode']);
+        const fieldData: Record<string, unknown> = { title };
+
+        if (item.status !== undefined) fieldData.status = item.status;
+        if (item.promote !== undefined) fieldData.promote = item.promote;
+        if (item.sticky !== undefined) fieldData.sticky = item.sticky;
+
+        for (const [key, val] of Object.entries(item)) {
+          if (!baseFields.has(key) && key.startsWith('field_')) {
+            fieldData[key] = val;
+          }
+        }
+
+        await Entity.create('node', bundle, {
+          ...fieldData,
+          uid: auth.user?.uid ?? 1,
+        });
+        created++;
+      } catch (err) {
+        errors.push(`Item ${i}: ${(err as Error).message}`);
+      }
+    }
+
+    revalidatePath('/content');
+    return { success: true, data: { created, errors } };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}

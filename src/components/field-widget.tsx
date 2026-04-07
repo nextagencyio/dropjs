@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PlusCircle, ChevronDown, X, FileText, Download, Upload, Loader2, Image, Link2 } from 'lucide-react';
+import { PlusCircle, ChevronDown, X, FileText, Download, Upload, Loader2, Image, Link2, FolderOpen } from 'lucide-react';
 import { searchEntitiesAction } from '@/app/(admin)/_actions/entity';
 import { RichTextEditor } from './rich-text-editor';
 import { uploadFile } from '@/lib/api-media';
+import { MediaBrowserModal, type MediaFile } from './media-browser-modal';
 
 export interface FieldDefinition {
   type: string;
@@ -849,6 +850,7 @@ function FileFieldWidget({
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBrowser, setShowBrowser] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const targetId = value?.target_id as number | null | undefined;
@@ -955,6 +957,14 @@ function FileFieldWidget({
             </>
           )}
         </button>
+        <button
+          type="button"
+          onClick={() => setShowBrowser(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gin-text bg-white border border-gin-border-form rounded-gin-s hover:bg-gin-bg-layer2 hover:border-gin-border transition-all duration-150"
+        >
+          <FolderOpen className="w-4 h-4 text-gin-text-light" />
+          Browse media
+        </button>
         <span className="text-sm text-gin-text-light">No file selected</span>
       </div>
       <input
@@ -964,6 +974,18 @@ function FileFieldWidget({
         onChange={handleInputChange}
         required={required && !targetId}
         className="hidden"
+      />
+      <MediaBrowserModal
+        open={showBrowser}
+        onClose={() => setShowBrowser(false)}
+        accept="file"
+        onSelect={(file: MediaFile) => {
+          onChange({
+            target_id: file.fid,
+            display: 1,
+            description: description || file.filename,
+          });
+        }}
       />
     </div>
   );
@@ -983,6 +1005,7 @@ function ImageFieldWidget({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const targetId = value?.target_id as number | null | undefined;
@@ -1144,6 +1167,14 @@ function ImageFieldWidget({
               </button>
             </p>
             <p className="text-xs text-gin-text-light">JPEG, PNG, WebP, GIF</p>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowBrowser(true); }}
+              className="mt-2 inline-flex items-center gap-1.5 text-sm text-gin-primary font-medium hover:underline"
+            >
+              <FolderOpen className="w-4 h-4" />
+              Browse media library
+            </button>
           </>
         )}
       </div>
@@ -1155,6 +1186,20 @@ function ImageFieldWidget({
         onChange={handleInputChange}
         required={required && !targetId}
         className="hidden"
+      />
+      <MediaBrowserModal
+        open={showBrowser}
+        onClose={() => setShowBrowser(false)}
+        accept="image"
+        onSelect={(file: MediaFile) => {
+          onChange({
+            target_id: file.fid,
+            alt: alt || file.filename,
+            title: title || file.filename,
+            width: null,
+            height: null,
+          });
+        }}
       />
     </div>
   );

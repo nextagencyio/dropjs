@@ -60,6 +60,7 @@ export default function ContentListClient({ types, entities: initialEntities, to
   const [batchAction, setBatchAction] = useState('');
   const [batchRunning, setBatchRunning] = useState(false);
   const [openOps, setOpenOps] = useState<number | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState<number | null>(null);
 
   const { type: typeFilter, status: statusFilter, author: authorFilter, search, offset } = params;
   const limit = 50;
@@ -73,6 +74,19 @@ export default function ContentListClient({ types, entities: initialEntities, to
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, [openOps]);
+
+  const handleToggleStatus = async (item: ContentEntity) => {
+    setTogglingStatus(item.nid!);
+    try {
+      const newStatus = !item.status;
+      const result = await updateEntity(item._entityType, item._bundle, item.nid!, { status: newStatus });
+      if (!result.success) throw new Error(result.error);
+      router.refresh();
+    } catch {
+      // Silently fail - user can retry
+    }
+    setTogglingStatus(null);
+  };
 
   const handleDelete = async (item: ContentEntity) => {
     if (!confirm(`Delete "${item.title}"?`)) return;
@@ -331,15 +345,25 @@ export default function ContentListClient({ types, entities: initialEntities, to
                       {(item._label as string) ?? item.type}
                     </td>
                     <td className="px-4 py-3">
-                      {item.status ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-gin-green">
-                          Published
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gin-text-light">
-                          Draft
-                        </span>
-                      )}
+                      <button
+                        onClick={() => handleToggleStatus(item)}
+                        disabled={togglingStatus === item.nid}
+                        title={item.status ? 'Click to unpublish' : 'Click to publish'}
+                        aria-label={item.status ? `Unpublish ${item.title}` : `Publish ${item.title}`}
+                        className="group cursor-pointer disabled:cursor-wait"
+                      >
+                        {item.status ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-gin-green group-hover:bg-emerald-100 transition-colors">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gin-green" />
+                            {togglingStatus === item.nid ? 'Updating...' : 'Published'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gin-text-light group-hover:bg-gray-200 transition-colors">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gin-warning" />
+                            {togglingStatus === item.nid ? 'Updating...' : 'Draft'}
+                          </span>
+                        )}
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-gin-text-light text-[13px]">
                       {users.find((u) => u.uid === Number(item.uid))?.name || item.uid || '\u2014'}

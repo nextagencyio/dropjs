@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { CircleAlert, Calendar, Clock, Loader2, Eye } from 'lucide-react';
 import {
@@ -39,6 +39,7 @@ const BASE_FIELDS = new Set(['nid', 'uuid', 'type', 'uid', 'created', 'changed']
 
 export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [definition, setDefinition] = useState<EntityTypeDefinition | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>({
     title: '',
@@ -85,6 +86,18 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
     }
     load();
   }, [entityType, bundle, entityId]);
+
+  // Ctrl+S / Cmd+S to save
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        formRef.current?.requestSubmit();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent, asDraft = false) => {
     e.preventDefault();
@@ -191,7 +204,7 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
   );
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form ref={formRef} onSubmit={handleSubmit}>
       {error && (
         <div className="bg-red-50 border border-red-200 text-gin-danger rounded-gin-s px-4 py-3 text-sm mb-5 flex items-start gap-2">
           <CircleAlert className="w-4 h-4 mt-0.5 shrink-0" />

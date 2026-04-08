@@ -2,9 +2,10 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronRight, ExternalLink, Search } from 'lucide-react';
 import { AdminToolbar } from './admin-toolbar';
 import { ToastProvider } from './toast';
+import { CommandPalette } from './command-palette';
 
 interface SerializableUser {
   uid: number;
@@ -51,6 +52,7 @@ export function AdminShell({
     <ToastProvider>
     <div className="min-h-dvh bg-gin-bg-app">
       <AdminToolbar user={toolbarUser} logout={handleLogout} />
+      <CommandPalette />
 
       <div className="ml-16 min-h-dvh flex flex-col">
         {/* Secondary top bar */}
@@ -76,6 +78,17 @@ export function AdminShell({
           </nav>
 
           <div className="flex items-center gap-4 text-sm shrink-0">
+            <button
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gin-text-light bg-gin-bg-layer2 border border-gin-border rounded-gin-s hover:border-gin-text-light/30 transition-colors"
+              aria-label="Search commands"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="text-[13px]">Search...</span>
+              <kbd className="ml-2 px-1.5 py-0.5 text-[10px] font-medium bg-white border border-gin-border rounded">
+                ⌘K
+              </kbd>
+            </button>
             <a
               href="/"
               target="_blank"

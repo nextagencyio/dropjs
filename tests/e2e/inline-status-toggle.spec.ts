@@ -43,6 +43,6 @@ test.describe('Ctrl+S Save Shortcut', () => {
     // Should navigate to content list after successful save
     await expect(page.getByRole('heading', { name: 'Content' })).toBeVisible({ timeout: 15000 });
     // Verify the article was created
-    await expect(page.getByText('Ctrl+S Test Article')).toBeVisible();
+    await expect(page.getByText('Ctrl+S Test Article').first()).toBeVisible();
   });
 });

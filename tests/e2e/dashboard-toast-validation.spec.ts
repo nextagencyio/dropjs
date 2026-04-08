@@ -28,7 +28,8 @@ test.describe('Enhanced Dashboard', () => {
   test('should show search status in system status', async ({ authenticatedPage: page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Search')).toBeVisible();
+    // Search status may show as "Unavailable" or with backend info
+    await expect(page.getByText('Search').first()).toBeVisible();
   });
 
   test('should show cron jobs link in system status', async ({ authenticatedPage: page }) => {

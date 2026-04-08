@@ -28,14 +28,68 @@ export function AdminShell({
     await signOut({ callbackUrl: '/login' });
   };
 
-  // Build breadcrumb from path
+  // Build breadcrumb from path with friendly labels
+  const BREADCRUMB_LABELS: Record<string, string> = {
+    content: 'Content',
+    structure: 'Structure',
+    config: 'Configuration',
+    people: 'People',
+    reports: 'Reports',
+    appearance: 'Appearance',
+    extend: 'Extend',
+    help: 'Help',
+    media: 'Media',
+    node: 'Content',
+    types: 'Content types',
+    taxonomy: 'Taxonomy',
+    menus: 'Menus',
+    views: 'Views',
+    blocks: 'Block layout',
+    paragraphs: 'Paragraph types',
+    'field-groups': 'Field groups',
+    roles: 'Roles',
+    'url-aliases': 'URL aliases',
+    redirects: 'URL redirects',
+    languages: 'Languages',
+    sync: 'Config sync',
+    site: 'Site settings',
+    cron: 'Cron',
+    search: 'Search',
+    'import-export': 'Import / Export',
+    'audit-log': 'Audit log',
+    logs: 'Log messages',
+    status: 'Status report',
+    comments: 'Comments',
+    scheduled: 'Scheduled',
+    add: 'Add',
+    edit: 'Edit',
+    translations: 'Translations',
+    revisions: 'Revisions',
+    fields: 'Fields',
+    permissions: 'Permissions',
+    shortcuts: 'Shortcuts',
+    webhooks: 'Webhooks',
+    contact: 'Contact forms',
+    actions: 'Actions',
+    'text-formats': 'Text formats',
+    'image-styles': 'Image styles',
+    'rest-resources': 'REST resources',
+    'layout-builder': 'Layout builder',
+    pathauto: 'URL patterns',
+  };
+
   const pathParts = pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+  // Skip numeric IDs in breadcrumbs (e.g., /node/1/edit → just show "Edit")
+  const breadcrumbParts = pathParts.filter((part) => !/^\d+$/.test(part));
   const breadcrumbs = [
     { label: 'Administration', href: '/' },
-    ...pathParts.map((part, i) => ({
-      label: part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' '),
-      href: '/' + pathParts.slice(0, i + 1).join('/'),
-    })),
+    ...breadcrumbParts.map((part, i) => {
+      const label = BREADCRUMB_LABELS[part] || part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ');
+      // Build href using original pathParts up to the position of this part
+      const origIndex = pathParts.indexOf(part);
+      const href = '/' + pathParts.slice(0, origIndex + 1).join('/');
+      return { label, href };
+    }),
   ];
 
   // AdminToolbar expects User | null shape

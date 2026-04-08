@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { deleteContentType } from '@/app/(admin)/_actions/entity';
+import { useToast } from '@/components/toast';
 
 export function DeleteContentTypeButton({
   entityType,
@@ -13,6 +14,7 @@ export function DeleteContentTypeButton({
   label: string;
 }) {
   const router = useRouter();
+  const { error: showError } = useToast();
 
   const handleDelete = async () => {
     if (!confirm(`Delete content type "${label}"? This cannot be undone.`)) return;
@@ -20,7 +22,7 @@ export function DeleteContentTypeButton({
     if (result.success) {
       router.refresh();
     } else {
-      alert(result.error ?? 'Failed to delete content type');
+      showError(result.error ?? 'Failed to delete content type');
     }
   };
 

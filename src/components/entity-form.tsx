@@ -46,6 +46,7 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,6 +90,30 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setFieldErrors({});
+
+    // Client-side required field validation
+    if (definition) {
+      const errors: Record<string, string> = {};
+      if (!formData.title) {
+        errors.title = 'Title is required';
+      }
+      for (const [fieldName, fieldDef] of Object.entries(definition.fields)) {
+        if (BASE_FIELDS.has(fieldName) || fieldName === 'title' || fieldName === 'status') continue;
+        if (fieldDef.required) {
+          const val = formData[fieldName];
+          if (val === null || val === undefined || val === '' || (typeof val === 'object' && !Array.isArray(val) && val !== null && Object.keys(val).length === 0)) {
+            errors[fieldName] = `${fieldDef.label || fieldName} is required`;
+          }
+        }
+      }
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        setError(`Please fix ${Object.keys(errors).length} field error(s) below.`);
+        setSaving(false);
+        return;
+      }
+    }
 
     const dataToSave = asDraft
       ? { ...formData, status: false }
@@ -99,7 +124,13 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
         ? await updateEntity(entityType, bundle, entityId, dataToSave)
         : await createEntity(entityType, bundle, dataToSave);
       if (!result.success) {
-        setError(result.error || 'Save failed');
+        // Try to parse field-specific errors from server message
+        const errMsg = result.error || 'Save failed';
+        const fieldMatch = errMsg.match(/field[_ ]'?(\w+)'?/i);
+        if (fieldMatch) {
+          setFieldErrors({ [fieldMatch[1]]: errMsg });
+        }
+        setError(errMsg);
         setSaving(false);
         return;
       }
@@ -180,11 +211,13 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
               id="title"
               type="text"
               value={(formData.title as string) ?? ''}
-              onChange={(e) => setField('title', e.target.value)}
-              required
+              onChange={(e) => { setField('title', e.target.value); if (fieldErrors.title) setFieldErrors((prev) => { const n = {...prev}; delete n.title; return n; }); }}
               placeholder="Enter a title..."
-              className="w-full px-4 py-3 text-lg font-medium border border-gin-border-form rounded-gin-s bg-white text-gin-title placeholder-gin-text-light/50 tracking-tight transition-colors focus:outline-none focus:ring-2 focus:ring-gin-primary/30 focus:border-gin-primary"
+              className={`w-full px-4 py-3 text-lg font-medium border rounded-gin-s bg-white text-gin-title placeholder-gin-text-light/50 tracking-tight transition-colors focus:outline-none focus:ring-2 focus:ring-gin-primary/30 focus:border-gin-primary ${fieldErrors.title ? 'border-gin-danger' : 'border-gin-border-form'}`}
             />
+            {fieldErrors.title && (
+              <p className="text-xs text-gin-danger mt-1">{fieldErrors.title}</p>
+            )}
           </div>
 
           {/* Custom fields */}
@@ -194,7 +227,8 @@ export function EntityForm({ entityType, bundle, entityId }: EntityFormProps) {
               fieldName={fieldName}
               field={fieldDef}
               value={formData[fieldName]}
-              onChange={(val) => setField(fieldName, val)}
+              onChange={(val) => { setField(fieldName, val); if (fieldErrors[fieldName]) setFieldErrors((prev) => { const n = {...prev}; delete n[fieldName]; return n; }); }}
+              error={fieldErrors[fieldName]}
             />
           ))}
         </div>

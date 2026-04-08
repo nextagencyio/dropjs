@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createMenu, deleteMenu } from '@/app/(admin)/_actions/system';
+import { useToast } from '@/components/toast';
 
 export function DeleteMenuButton({ menuId }: { menuId: string }) {
   const router = useRouter();
+  const { error: showError } = useToast();
 
   const handleDelete = async () => {
     if (!confirm(`Delete the "${menuId}" menu?`)) return;
@@ -13,7 +15,7 @@ export function DeleteMenuButton({ menuId }: { menuId: string }) {
     if (result.success) {
       router.refresh();
     } else {
-      alert(result.error ?? 'Failed to delete menu');
+      showError(result.error ?? 'Failed to delete menu');
     }
   };
 

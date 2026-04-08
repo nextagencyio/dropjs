@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createFieldGroup, deleteFieldGroup } from '@/app/(admin)/_actions/system';
+import { useToast } from '@/components/toast';
 
 interface GroupInfo {
   id: string;
@@ -33,6 +34,7 @@ export function DeleteFieldGroupButton({
   label: string;
 }) {
   const router = useRouter();
+  const { error: showError } = useToast();
 
   const handleDelete = async () => {
     if (!confirm(`Delete the "${label}" field group?`)) return;
@@ -40,7 +42,7 @@ export function DeleteFieldGroupButton({
     if (result.success) {
       router.refresh();
     } else {
-      alert(result.error ?? 'Failed to delete field group');
+      showError(result.error ?? 'Failed to delete field group');
     }
   };
 

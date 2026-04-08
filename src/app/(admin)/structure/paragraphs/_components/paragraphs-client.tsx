@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createParagraphType, deleteParagraphType } from '@/app/(admin)/_actions/system';
+import { useToast } from '@/components/toast';
 
 interface ParagraphField {
   name: string;
@@ -13,6 +14,7 @@ interface ParagraphField {
 
 export function DeleteParagraphTypeButton({ typeId }: { typeId: string }) {
   const router = useRouter();
+  const { error: showError } = useToast();
 
   const handleDelete = async () => {
     if (!confirm(`Delete the "${typeId}" paragraph type?`)) return;
@@ -20,7 +22,7 @@ export function DeleteParagraphTypeButton({ typeId }: { typeId: string }) {
     if (result.success) {
       router.refresh();
     } else {
-      alert(result.error ?? 'Failed to delete paragraph type');
+      showError(result.error ?? 'Failed to delete paragraph type');
     }
   };
 

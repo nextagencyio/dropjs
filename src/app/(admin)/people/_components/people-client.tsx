@@ -7,6 +7,7 @@ import {
   updateUser,
   deleteUser,
 } from '@/app/(admin)/_actions/user';
+import { useToast } from '@/components/toast';
 
 export interface UserRow {
   uid: number;
@@ -30,6 +31,7 @@ export function PeopleActions({
   roles: RoleOption[];
 }) {
   const router = useRouter();
+  const { error: showError } = useToast();
   const [showCreate, setShowCreate] = useState(false);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
 
@@ -37,7 +39,7 @@ export function PeopleActions({
     if (!confirm(`Delete user "${user.name}"? This cannot be undone.`)) return;
     const result = await deleteUser(user.uid);
     if (!result.success) {
-      alert(result.error ?? 'Failed to delete user');
+      showError(result.error ?? 'Failed to delete user');
     } else {
       router.refresh();
     }

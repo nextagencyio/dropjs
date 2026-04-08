@@ -7,6 +7,7 @@ import {
   createRole,
   deleteRole,
 } from '@/app/(admin)/_actions/user';
+import { useToast } from '@/components/toast';
 
 export interface RoleRow {
   name: string;
@@ -17,6 +18,7 @@ const builtInRoles = new Set(['anonymous', 'authenticated', 'admin']);
 
 export function RolesActions({ roles }: { roles: RoleRow[] }) {
   const router = useRouter();
+  const { error: showError } = useToast();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newLabel, setNewLabel] = useState('');
@@ -27,7 +29,7 @@ export function RolesActions({ roles }: { roles: RoleRow[] }) {
     setCreating(true);
     const result = await createRole(newName, newLabel);
     if (!result.success) {
-      alert(result.error ?? 'Failed to create role');
+      showError(result.error ?? 'Failed to create role');
     } else {
       setNewName('');
       setNewLabel('');
@@ -41,7 +43,7 @@ export function RolesActions({ roles }: { roles: RoleRow[] }) {
     if (!confirm(`Delete role "${role.label}"? This cannot be undone.`)) return;
     const result = await deleteRole(role.name);
     if (!result.success) {
-      alert(result.error ?? 'Failed to delete role');
+      showError(result.error ?? 'Failed to delete role');
     } else {
       router.refresh();
     }

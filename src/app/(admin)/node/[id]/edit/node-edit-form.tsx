@@ -6,6 +6,7 @@ import { ChevronRight, Clock, FileText, Calendar, Globe } from 'lucide-react';
 import { EntityForm } from '@/components/entity-form';
 import { ContentLockBanner } from '@/components/content-lock-banner';
 import { setSchedule, cancelSchedule } from '../../../_actions/entity';
+import { useToast } from '@/components/toast';
 
 interface AuditEntry {
   action: string;
@@ -43,6 +44,7 @@ export function NodeEditForm({
   auditEntries?: AuditEntry[];
   schedule?: { transition: string; scheduled_date: string } | null;
 }) {
+  const { error: showError } = useToast();
   const [scheduleState, setScheduleState] = useState(schedule ?? null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTransition, setScheduleTransition] = useState<'publish' | 'unpublish'>('publish');
@@ -57,7 +59,7 @@ export function NodeEditForm({
         setScheduleState({ transition: scheduleTransition, scheduled_date: new Date(scheduleDate).toISOString() });
         setScheduleDate('');
       } else {
-        alert(result.error || 'Failed to set schedule');
+        showError(result.error || 'Failed to set schedule');
       }
     } finally {
       setScheduleLoading(false);
@@ -72,7 +74,7 @@ export function NodeEditForm({
       if (result.success) {
         setScheduleState(null);
       } else {
-        alert(result.error || 'Failed to cancel schedule');
+        showError(result.error || 'Failed to cancel schedule');
       }
     } finally {
       setScheduleLoading(false);

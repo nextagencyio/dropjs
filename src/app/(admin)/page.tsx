@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { Inbox, FileText, Plus } from 'lucide-react';
+import { Inbox, FileText, Plus, Activity, Search, Clock, Server } from 'lucide-react';
 import { requireAuth } from '@/lib/server/auth';
-import { getEntityTypes, listEntities, listUsers } from '@/lib/server/data';
+import { getEntityTypes, listEntities, listUsers, getStatusReport, getSearchStatus, getCronJobsList } from '@/lib/server/data';
 import type { EntityData } from '@/lib/server/data';
 
 interface ContentCount {
@@ -64,6 +64,20 @@ export default async function DashboardPage() {
     recentUsers = sorted.slice(0, 5);
   } catch {
     // User may not have permission
+  }
+
+  // System status data
+  let statusReport: Awaited<ReturnType<typeof getStatusReport>> | null = null;
+  let searchStatus: Awaited<ReturnType<typeof getSearchStatus>> | null = null;
+  let cronJobs: Awaited<ReturnType<typeof getCronJobsList>> = [];
+  try {
+    [statusReport, searchStatus, cronJobs] = await Promise.all([
+      getStatusReport(),
+      getSearchStatus(),
+      getCronJobsList(),
+    ]);
+  } catch {
+    // Non-critical
   }
 
   const totalContent = contentCounts.reduce((sum, c) => sum + c.total, 0);
@@ -243,6 +257,74 @@ export default async function DashboardPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* System status */}
+          {statusReport && (
+            <div className="bg-white border border-gin-border rounded-gin overflow-hidden">
+              <div className="px-4 py-3 border-b border-gin-border-table-header bg-gin-bg-layer2 flex items-center justify-between">
+                <h2 className="text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">
+                  System status
+                </h2>
+                <Link
+                  href="/reports/status"
+                  className="text-[13px] text-gin-primary hover:underline font-medium"
+                >
+                  Details
+                </Link>
+              </div>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-gin-text-light">
+                    <Server className="w-3.5 h-3.5" />
+                    <span>Node.js</span>
+                  </div>
+                  <span className="text-gin-text font-medium text-xs">{statusReport.node_version}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-gin-text-light">
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Uptime</span>
+                  </div>
+                  <span className="text-gin-text font-medium text-xs">
+                    {statusReport.uptime > 3600
+                      ? `${Math.floor(statusReport.uptime / 3600)}h ${Math.floor((statusReport.uptime % 3600) / 60)}m`
+                      : `${Math.floor(statusReport.uptime / 60)}m`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-gin-text-light">
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Memory</span>
+                  </div>
+                  <span className="text-gin-text font-medium text-xs">
+                    {Math.round(statusReport.memory.heapUsed / 1024 / 1024)}MB / {Math.round(statusReport.memory.heapTotal / 1024 / 1024)}MB
+                  </span>
+                </div>
+                {searchStatus && (
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-gin-text-light">
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Search</span>
+                    </div>
+                    <span className={`text-xs font-medium ${searchStatus.available ? 'text-gin-green' : 'text-gin-text-light'}`}>
+                      {searchStatus.available ? `${searchStatus.backend} (${searchStatus.indexedCount} indexed)` : 'Unavailable'}
+                    </span>
+                  </div>
+                )}
+                {cronJobs.length > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-gin-text-light">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Cron jobs</span>
+                    </div>
+                    <Link href="/config/cron" className="text-xs font-medium text-gin-primary hover:underline">
+                      {cronJobs.length} registered
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ChevronRight, ChevronUp, ChevronDown, ChevronLeft } from 'lucide-react';
 import { reorderTerms, deleteTerm } from '@/app/(admin)/_actions/system';
+import { useToast } from '@/components/toast';
 
 export interface TermTreeNode {
   tid: number;
@@ -119,6 +120,7 @@ export function TermTreeClient({
   initialTree: TermTreeNode[];
   initialContentCounts: Record<number, number>;
 }) {
+  const { error: showError } = useToast();
   const [tree, setTree] = useState<TermTreeNode[]>(initialTree);
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const contentCounts = initialContentCounts;
@@ -136,7 +138,7 @@ export function TermTreeClient({
       }
       setTree(removeFromTree(tree));
     } else {
-      alert(result.error ?? 'Failed to delete term');
+      showError(result.error ?? 'Failed to delete term');
     }
   };
 
@@ -168,7 +170,7 @@ export function TermTreeClient({
     if (result.success) {
       setTree(newTree);
     } else {
-      alert(result.error ?? 'Failed to save order');
+      showError(result.error ?? 'Failed to save order');
     }
     setSaving(false);
   }

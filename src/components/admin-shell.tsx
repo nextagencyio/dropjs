@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import { AdminToolbar } from './admin-toolbar';
+import { ToastProvider } from './toast';
 
 interface SerializableUser {
   uid: number;
@@ -47,6 +48,7 @@ export function AdminShell({
   };
 
   return (
+    <ToastProvider>
     <div className="min-h-dvh bg-gin-bg-app">
       <AdminToolbar user={toolbarUser} logout={handleLogout} />
 
@@ -90,5 +92,6 @@ export function AdminShell({
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }

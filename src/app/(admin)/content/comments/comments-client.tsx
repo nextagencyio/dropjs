@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MessageSquare, Check, X, Trash2, Loader2 } from 'lucide-react';
 import { approveComment, unpublishComment, deleteCommentAction } from '@/app/(admin)/_actions/comments';
+import { useToast } from '@/components/toast';
 
 interface CommentSummary {
   cid: number;
@@ -36,12 +37,13 @@ function truncate(str: string, len: number): string {
 
 export default function CommentsClient({ comments, statusFilter }: Props) {
   const router = useRouter();
+  const { error: showError } = useToast();
   const [loadingCid, setLoadingCid] = useState<number | null>(null);
 
   const handleApprove = async (cid: number) => {
     setLoadingCid(cid);
     const result = await approveComment(cid);
-    if (!result.success) alert(result.error);
+    if (!result.success) showError(result.error ?? 'Operation failed');
     router.refresh();
     setLoadingCid(null);
   };
@@ -49,7 +51,7 @@ export default function CommentsClient({ comments, statusFilter }: Props) {
   const handleUnpublish = async (cid: number) => {
     setLoadingCid(cid);
     const result = await unpublishComment(cid);
-    if (!result.success) alert(result.error);
+    if (!result.success) showError(result.error ?? 'Operation failed');
     router.refresh();
     setLoadingCid(null);
   };
@@ -58,7 +60,7 @@ export default function CommentsClient({ comments, statusFilter }: Props) {
     if (!confirm('Delete this comment permanently?')) return;
     setLoadingCid(cid);
     const result = await deleteCommentAction(cid);
-    if (!result.success) alert(result.error);
+    if (!result.success) showError(result.error ?? 'Operation failed');
     router.refresh();
     setLoadingCid(null);
   };

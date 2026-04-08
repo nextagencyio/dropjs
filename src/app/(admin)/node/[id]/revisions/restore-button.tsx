@@ -3,9 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { restoreRevision } from '@/app/(admin)/_actions/entity';
+import { useToast } from '@/components/toast';
 
 export function RestoreRevisionButton({ nid, vid }: { nid: number; vid: number }) {
   const router = useRouter();
+  const { error: showError } = useToast();
   const [loading, setLoading] = useState(false);
 
   async function handleRestore() {
@@ -19,10 +21,10 @@ export function RestoreRevisionButton({ nid, vid }: { nid: number; vid: number }
       if (result.success) {
         router.refresh();
       } else {
-        alert(result.error || 'Failed to restore revision');
+        showError(result.error || 'Failed to restore revision');
       }
     } catch (err) {
-      alert('Failed to restore revision');
+      showError('Failed to restore revision');
     } finally {
       setLoading(false);
     }

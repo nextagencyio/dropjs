@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteField, reorderFields } from '@/app/(admin)/_actions/entity';
+import { useToast } from '@/components/toast';
 
 interface FieldRow {
   name: string;
@@ -23,6 +24,7 @@ export function DeleteFieldButton({
   bundle: string;
 }) {
   const router = useRouter();
+  const { error: showError } = useToast();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -36,7 +38,7 @@ export function DeleteFieldButton({
             if (result.success) {
               router.refresh();
             } else {
-              alert(result.error ?? 'Failed to delete field');
+              showError(result.error ?? 'Failed to delete field');
             }
             setDeleting(false);
             setConfirming(false);
@@ -82,6 +84,7 @@ export function ReorderFieldButton({
   fields: FieldRow[];
 }) {
   const router = useRouter();
+  const { error: showError } = useToast();
 
   const handleMove = async () => {
     const sorted = [...fields].sort((a, b) => a.weight - b.weight);
@@ -109,7 +112,7 @@ export function ReorderFieldButton({
     if (result.success) {
       router.refresh();
     } else {
-      alert(result.error ?? 'Failed to reorder fields');
+      showError(result.error ?? 'Failed to reorder fields');
     }
   };
 

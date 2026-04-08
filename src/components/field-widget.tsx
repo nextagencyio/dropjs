@@ -21,9 +21,10 @@ interface FieldWidgetProps {
   field: FieldDefinition;
   value: unknown;
   onChange: (value: unknown) => void;
+  error?: string;
 }
 
-export function FieldWidget({ fieldName, field, value, onChange }: FieldWidgetProps) {
+export function FieldWidget({ fieldName, field, value, onChange, error }: FieldWidgetProps) {
   const isMulti = field.cardinality !== undefined && field.cardinality !== 1;
 
   if (isMulti) {
@@ -50,6 +51,9 @@ export function FieldWidget({ fieldName, field, value, onChange }: FieldWidgetPr
         value={value}
         onChange={onChange}
       />
+      {error && (
+        <p className="text-xs text-gin-danger mt-1">{error}</p>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { deleteVocabulary } from '@/app/(admin)/_actions/system';
+import { useToast } from '@/components/toast';
 
 export function DeleteVocabularyButton({
   vid,
@@ -11,6 +12,7 @@ export function DeleteVocabularyButton({
   label: string;
 }) {
   const router = useRouter();
+  const { error: showError } = useToast();
 
   const handleDelete = async () => {
     if (!confirm(`Delete vocabulary "${label}"?`)) return;
@@ -18,7 +20,7 @@ export function DeleteVocabularyButton({
     if (result.success) {
       router.refresh();
     } else {
-      alert(result.error ?? 'Failed to delete vocabulary');
+      showError(result.error ?? 'Failed to delete vocabulary');
     }
   };
 

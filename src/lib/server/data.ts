@@ -1356,6 +1356,12 @@ export async function getViewModes(entityType: string) {
   return listViewModes(entityType);
 }
 
+export async function getFormDisplay(entityType: string, bundle: string, mode: string = 'default') {
+  await ensureInitialized();
+  const { getOrCreateFormDisplay } = await import('../../core/display-modes');
+  return getOrCreateFormDisplay(entityType, bundle, mode);
+}
+
 // ── Config Sync ──────────────────────────────────────────────────────
 
 export async function exportConfig(): Promise<Record<string, Record<string, unknown>>> {

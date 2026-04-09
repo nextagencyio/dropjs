@@ -95,6 +95,12 @@ export default async function ContentTypeFieldsPage({
         >
           Manage display
         </Link>
+        <Link
+          href={`/structure/types/${entityType}/${bundle}/form-display`}
+          className="inline-flex items-center px-4 py-2 text-sm font-medium text-gin-text-light border-b-2 border-transparent hover:text-gin-text hover:border-gin-border -mb-px transition-colors"
+        >
+          Manage form display
+        </Link>
       </div>
 
       <div className="bg-white border border-gin-border rounded-gin overflow-x-auto">

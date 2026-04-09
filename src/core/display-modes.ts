@@ -243,3 +243,105 @@ export async function applyViewDisplay(
 
   return result;
 }
+
+// ── Form Display (widget configuration) ────────────────────────────
+
+/**
+ * Field form display configuration — controls how fields appear on edit forms.
+ */
+export interface FieldFormDisplay {
+  field: string;
+  widget: string;
+  widget_settings: Record<string, unknown>;
+  weight: number;
+  visible: boolean;
+}
+
+/**
+ * Entity form display — stores per-bundle form widget configuration.
+ * Config key: core.entity_form_display.{entity_type}.{bundle}.default
+ */
+export interface EntityFormDisplay {
+  entity_type: string;
+  bundle: string;
+  mode: string;
+  fields: Record<string, FieldFormDisplay>;
+}
+
+function formDisplayConfigKey(entityType: string, bundle: string, mode: string): string {
+  return `core.entity_form_display.${entityType}.${bundle}.${mode}`;
+}
+
+export async function saveFormDisplay(display: EntityFormDisplay): Promise<void> {
+  await saveConfig(
+    formDisplayConfigKey(display.entity_type, display.bundle, display.mode),
+    display as unknown as Record<string, unknown>,
+  );
+  logger.debug(`Saved form display: ${display.entity_type}.${display.bundle}.${display.mode}`);
+}
+
+export async function loadFormDisplay(
+  entityType: string,
+  bundle: string,
+  mode: string = 'default',
+): Promise<EntityFormDisplay | null> {
+  const data = await loadConfig(formDisplayConfigKey(entityType, bundle, mode));
+  return data as EntityFormDisplay | null;
+}
+
+export async function getOrCreateFormDisplay(
+  entityType: string,
+  bundle: string,
+  mode: string = 'default',
+): Promise<EntityFormDisplay> {
+  const existing = await loadFormDisplay(entityType, bundle, mode);
+  if (existing) return existing;
+  return generateDefaultFormDisplay(entityType, bundle, mode);
+}
+
+function getDefaultWidget(fieldType: string): string {
+  switch (fieldType) {
+    case 'string': return 'string_textfield';
+    case 'text_long': return 'text_textarea';
+    case 'text_with_summary': return 'text_textarea_with_summary';
+    case 'integer': return 'number';
+    case 'float': case 'decimal': return 'number';
+    case 'boolean': return 'boolean_checkbox';
+    case 'entity_reference': return 'entity_reference_autocomplete';
+    case 'image': return 'image_image';
+    case 'file': return 'file_generic';
+    case 'link': return 'link_default';
+    case 'email': return 'email_default';
+    case 'telephone': return 'telephone_default';
+    case 'date': return 'date_default';
+    case 'timestamp': return 'datetime_timestamp';
+    case 'color': return 'color_default';
+    case 'list_string': return 'options_select';
+    case 'json': return 'json_editor';
+    default: return 'string_textfield';
+  }
+}
+
+function generateDefaultFormDisplay(
+  entityType: string,
+  bundle: string,
+  mode: string,
+): EntityFormDisplay {
+  const definition = getEntityTypeDefinition(entityType, bundle);
+  const fields: Record<string, FieldFormDisplay> = {};
+
+  if (definition) {
+    let weight = 0;
+    for (const [name, field] of Object.entries(definition.fields)) {
+      fields[name] = {
+        field: name,
+        widget: getDefaultWidget(field.type),
+        widget_settings: {},
+        weight: weight++,
+        visible: true,
+      };
+    }
+  }
+
+  return { entity_type: entityType, bundle, mode, fields };
+}

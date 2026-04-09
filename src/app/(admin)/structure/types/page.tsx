@@ -71,6 +71,18 @@ export default async function ContentTypesPage() {
                         Manage fields
                       </Link>
                       <Link
+                        href={`/structure/types/${item.entity_type}/${item.bundle}/display`}
+                        className="text-sm text-gin-primary hover:underline"
+                      >
+                        Manage display
+                      </Link>
+                      <Link
+                        href={`/structure/types/${item.entity_type}/${item.bundle}/form-display`}
+                        className="text-sm text-gin-primary hover:underline"
+                      >
+                        Form display
+                      </Link>
+                      <Link
                         href={`/structure/types/${item.entity_type}/${item.bundle}/edit`}
                         className="text-sm text-gin-primary hover:underline"
                       >

@@ -265,11 +265,16 @@ export {
   deleteViewDisplay,
   getOrCreateViewDisplay,
   applyViewDisplay,
+  saveFormDisplay,
+  loadFormDisplay,
+  getOrCreateFormDisplay,
 } from './display-modes.js';
 export type {
   FieldDisplay,
   EntityViewDisplay,
   ViewMode,
+  FieldFormDisplay,
+  EntityFormDisplay,
 } from './display-modes.js';
 
 export {

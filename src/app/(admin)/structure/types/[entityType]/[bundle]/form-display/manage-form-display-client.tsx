@@ -2,150 +2,119 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle2, CircleAlert, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
-import { saveViewDisplayAction } from '@/app/(admin)/_actions/entity';
+import { saveFormDisplayAction } from '@/app/(admin)/_actions/entity';
 
-interface ViewMode {
-  id: string;
-  entity_type: string;
-  label: string;
-}
-
-interface FieldDisplay {
+interface FieldFormDisplay {
   field: string;
-  label: string;
-  formatter: string;
-  formatter_settings: Record<string, unknown>;
+  widget: string;
+  widget_settings: Record<string, unknown>;
   weight: number;
   visible: boolean;
 }
 
-interface EntityViewDisplay {
+interface EntityFormDisplay {
   entity_type: string;
   bundle: string;
   mode: string;
-  label: string;
-  status: boolean;
-  fields: Record<string, FieldDisplay>;
+  fields: Record<string, FieldFormDisplay>;
 }
 
 interface Props {
   entityType: string;
   bundle: string;
   label: string;
-  currentMode: string;
-  viewModes: ViewMode[];
-  viewDisplay: EntityViewDisplay;
+  formDisplay: EntityFormDisplay;
   fieldDefinitions: Record<string, { type: string; label?: string; [key: string]: unknown }>;
 }
 
-const LABEL_OPTIONS = [
-  { value: 'above', label: 'Above' },
-  { value: 'inline', label: 'Inline' },
-  { value: 'hidden', label: 'Hidden' },
-  { value: 'visually_hidden', label: 'Visually hidden' },
-];
-
-const FORMATTERS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
+const WIDGETS_BY_TYPE: Record<string, { value: string; label: string }[]> = {
   string: [
-    { value: 'string', label: 'Plain text' },
-    { value: 'string_trimmed', label: 'Trimmed' },
+    { value: 'string_textfield', label: 'Text field' },
+    { value: 'string_textarea', label: 'Text area' },
   ],
   text_long: [
-    { value: 'text_default', label: 'Default' },
-    { value: 'text_trimmed', label: 'Trimmed' },
-    { value: 'text_summary', label: 'Summary or trimmed' },
+    { value: 'text_textarea', label: 'Text area' },
+    { value: 'text_textarea_with_summary', label: 'Text area with summary' },
   ],
   text_with_summary: [
-    { value: 'text_default', label: 'Default' },
-    { value: 'text_trimmed', label: 'Trimmed' },
-    { value: 'text_summary', label: 'Summary or trimmed' },
+    { value: 'text_textarea_with_summary', label: 'Text area with summary' },
+    { value: 'text_textarea', label: 'Text area (no summary)' },
   ],
   integer: [
-    { value: 'string', label: 'Plain text' },
-    { value: 'number_integer', label: 'Number (integer)' },
-    { value: 'number_unformatted', label: 'Unformatted' },
+    { value: 'number', label: 'Number field' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
   float: [
-    { value: 'string', label: 'Plain text' },
-    { value: 'number_decimal', label: 'Number (decimal)' },
-    { value: 'number_unformatted', label: 'Unformatted' },
+    { value: 'number', label: 'Number field' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
   decimal: [
-    { value: 'string', label: 'Plain text' },
-    { value: 'number_decimal', label: 'Number (decimal)' },
-    { value: 'number_unformatted', label: 'Unformatted' },
+    { value: 'number', label: 'Number field' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
   boolean: [
-    { value: 'boolean', label: 'Boolean' },
-    { value: 'string', label: 'Plain text (0/1)' },
+    { value: 'boolean_checkbox', label: 'Single on/off checkbox' },
+    { value: 'options_buttons', label: 'Check boxes/radio buttons' },
+    { value: 'options_select', label: 'Select list' },
   ],
   entity_reference: [
-    { value: 'entity_reference_label', label: 'Label' },
-    { value: 'entity_reference_id', label: 'Entity ID' },
-    { value: 'entity_reference_rendered', label: 'Rendered entity' },
+    { value: 'entity_reference_autocomplete', label: 'Autocomplete' },
+    { value: 'options_select', label: 'Select list' },
+    { value: 'options_buttons', label: 'Check boxes/radio buttons' },
   ],
   image: [
-    { value: 'image', label: 'Image' },
-    { value: 'image_url', label: 'URL to image' },
+    { value: 'image_image', label: 'Image' },
   ],
   file: [
-    { value: 'file_link', label: 'File link' },
-    { value: 'file_url', label: 'URL to file' },
+    { value: 'file_generic', label: 'File' },
   ],
   link: [
-    { value: 'link', label: 'Link' },
-    { value: 'link_separate', label: 'Separate link text and URL' },
-    { value: 'string', label: 'Plain text' },
-  ],
-  date: [
-    { value: 'date', label: 'Date' },
-    { value: 'timestamp_ago', label: 'Time ago' },
-    { value: 'string', label: 'Plain text' },
-  ],
-  timestamp: [
-    { value: 'timestamp', label: 'Timestamp' },
-    { value: 'timestamp_ago', label: 'Time ago' },
-    { value: 'string', label: 'Plain text' },
+    { value: 'link_default', label: 'Link' },
   ],
   email: [
-    { value: 'string', label: 'Plain text' },
-    { value: 'email_mailto', label: 'Email link' },
+    { value: 'email_default', label: 'Email' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
   telephone: [
-    { value: 'string', label: 'Plain text' },
-    { value: 'telephone_link', label: 'Telephone link' },
+    { value: 'telephone_default', label: 'Telephone' },
+    { value: 'string_textfield', label: 'Text field' },
+  ],
+  date: [
+    { value: 'date_default', label: 'Date' },
+    { value: 'string_textfield', label: 'Text field' },
+  ],
+  timestamp: [
+    { value: 'datetime_timestamp', label: 'Date and time' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
   color: [
-    { value: 'color_swatch', label: 'Color swatch' },
-    { value: 'string', label: 'Plain text' },
+    { value: 'color_default', label: 'Color picker' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
   list_string: [
-    { value: 'list_default', label: 'Default' },
-    { value: 'list_key', label: 'Key' },
+    { value: 'options_select', label: 'Select list' },
+    { value: 'options_buttons', label: 'Check boxes/radio buttons' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
   json: [
-    { value: 'string', label: 'Plain text' },
-    { value: 'json_pretty', label: 'Pretty-printed JSON' },
+    { value: 'json_editor', label: 'JSON editor' },
+    { value: 'string_textfield', label: 'Text field' },
   ],
 };
 
-function getFormattersForField(fieldType: string): { value: string; label: string }[] {
-  return FORMATTERS_BY_TYPE[fieldType] || [{ value: 'string', label: 'Plain text' }];
+function getWidgetsForField(fieldType: string): { value: string; label: string }[] {
+  return WIDGETS_BY_TYPE[fieldType] || [{ value: 'string_textfield', label: 'Text field' }];
 }
 
-export default function ManageDisplayClient({
+export default function ManageFormDisplayClient({
   entityType,
   bundle,
   label: entityLabel,
-  currentMode,
-  viewModes,
-  viewDisplay,
+  formDisplay,
   fieldDefinitions,
 }: Props) {
-  const router = useRouter();
-  const [fields, setFields] = useState<Record<string, FieldDisplay>>(viewDisplay.fields);
+  const [fields, setFields] = useState<Record<string, FieldFormDisplay>>(formDisplay.fields);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -154,7 +123,7 @@ export default function ManageDisplayClient({
   const visibleFields = sortedFields.filter((f) => f.visible);
   const hiddenFields = sortedFields.filter((f) => !f.visible);
 
-  const updateField = (name: string, update: Partial<FieldDisplay>) => {
+  const updateField = (name: string, update: Partial<FieldFormDisplay>) => {
     setFields((prev) => ({
       ...prev,
       [name]: { ...prev[name], ...update },
@@ -189,9 +158,9 @@ export default function ManageDisplayClient({
     setError(null);
     setSuccess(null);
 
-    const result = await saveViewDisplayAction(entityType, bundle, currentMode, fields);
+    const result = await saveFormDisplayAction(entityType, bundle, 'default', fields);
     if (result.success) {
-      setSuccess('Display settings saved.');
+      setSuccess('Form display settings saved.');
     } else {
       setError(result.error || 'Save failed');
     }
@@ -210,24 +179,24 @@ export default function ManageDisplayClient({
           {entityLabel}
         </Link>
         <span className="text-gin-text-light mx-2">/</span>
-        <span className="text-sm text-gin-text-light">Manage display</span>
+        <span className="text-sm text-gin-text-light">Manage form display</span>
       </div>
 
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-[28px] font-normal tracking-tight text-gin-title">
-            Manage display
+            Manage form display
           </h1>
           <p className="text-sm text-gin-text-light mt-1">
-            Configure how fields are displayed for <strong>{entityLabel}</strong>.
+            Configure how fields appear on the edit form for <strong>{entityLabel}</strong>.
           </p>
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/structure/types/${entityType}/${bundle}/form-display`}
+            href={`/structure/types/${entityType}/${bundle}/display`}
             className="border border-gin-border text-gin-text rounded-gin-s px-4 py-2 text-sm font-medium hover:bg-gin-bg-layer2 transition-colors"
           >
-            Manage form display
+            Manage display
           </Link>
           <Link
             href={`/structure/types/${entityType}/${bundle}/fields`}
@@ -236,23 +205,6 @@ export default function ManageDisplayClient({
             Manage fields
           </Link>
         </div>
-      </div>
-
-      {/* View mode tabs */}
-      <div className="flex items-center gap-1 mb-5 border-b border-gin-border overflow-x-auto">
-        {viewModes.map((vm) => (
-          <Link
-            key={vm.id}
-            href={`/structure/types/${entityType}/${bundle}/display?mode=${vm.id}`}
-            className={`inline-flex items-center px-4 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors ${
-              currentMode === vm.id
-                ? 'text-gin-primary border-gin-primary'
-                : 'text-gin-text-light border-transparent hover:text-gin-text hover:border-gin-border'
-            }`}
-          >
-            {vm.label}
-          </Link>
-        ))}
       </div>
 
       {error && (
@@ -276,11 +228,8 @@ export default function ManageDisplayClient({
               <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider">
                 Field
               </th>
-              <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-32">
-                Label
-              </th>
-              <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-36">
-                Formatter
+              <th className="text-left px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-48">
+                Widget
               </th>
               <th className="text-center px-4 py-3 text-[13px] font-semibold text-gin-text-light uppercase tracking-wider w-24">
                 Order
@@ -299,27 +248,16 @@ export default function ManageDisplayClient({
                     <div className="font-medium text-gin-title">
                       {def?.label || f.field}
                     </div>
-                    <div className="text-xs text-gin-text-light">{f.field}</div>
+                    <div className="text-xs text-gin-text-light">{f.field} ({def?.type || 'unknown'})</div>
                   </td>
                   <td className="px-4 py-3">
                     <select
-                      value={f.label}
-                      onChange={(e) => updateField(f.field, { label: e.target.value })}
+                      value={f.widget}
+                      onChange={(e) => updateField(f.field, { widget: e.target.value })}
                       className="border border-gin-border-form rounded-gin-s px-2 py-1 text-xs text-gin-text w-full focus:outline-none focus:ring-1 focus:ring-gin-primary"
                     >
-                      {LABEL_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={f.formatter}
-                      onChange={(e) => updateField(f.field, { formatter: e.target.value })}
-                      className="border border-gin-border-form rounded-gin-s px-2 py-1 text-xs text-gin-text w-full focus:outline-none focus:ring-1 focus:ring-gin-primary"
-                    >
-                      {getFormattersForField(def?.type || 'string').map((fmt) => (
-                        <option key={fmt.value} value={fmt.value}>{fmt.label}</option>
+                      {getWidgetsForField(def?.type || 'string').map((w) => (
+                        <option key={w.value} value={w.value}>{w.label}</option>
                       ))}
                     </select>
                   </td>
@@ -345,7 +283,7 @@ export default function ManageDisplayClient({
                     <button
                       onClick={() => toggleVisibility(f.field)}
                       className="p-1.5 rounded-gin-s text-emerald-600 hover:bg-emerald-50 transition-colors"
-                      title="Hide field"
+                      title="Hide field from form"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
@@ -355,7 +293,7 @@ export default function ManageDisplayClient({
             })}
             {visibleFields.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gin-text-light">
+                <td colSpan={4} className="px-4 py-6 text-center text-gin-text-light">
                   No visible fields. Use the hidden fields section below to show fields.
                 </td>
               </tr>
@@ -385,7 +323,7 @@ export default function ManageDisplayClient({
                     <button
                       onClick={() => toggleVisibility(f.field)}
                       className="p-1.5 rounded-gin-s text-gin-text-light hover:text-gin-primary hover:bg-gin-primary-light transition-colors"
-                      title="Show field"
+                      title="Show field on form"
                     >
                       <EyeOff className="w-4 h-4" />
                     </button>

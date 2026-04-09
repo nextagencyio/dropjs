@@ -460,6 +460,40 @@ export async function saveViewDisplayAction(
   }
 }
 
+// ── Manage Form Display ────────────────────────────────────────────
+
+export async function saveFormDisplayAction(
+  entityType: string,
+  bundle: string,
+  mode: string,
+  fields: Record<string, { widget: string; weight: number; visible: boolean; widget_settings?: Record<string, unknown> }>,
+): Promise<ActionResult> {
+  await ensureInitialized();
+  const auth = await requirePerm('administer content types');
+  if (!auth.success) return auth;
+
+  try {
+    const { saveFormDisplay, getOrCreateFormDisplay } = await import('../../../core/display-modes');
+    const existing = await getOrCreateFormDisplay(entityType, bundle, mode);
+
+    for (const [name, update] of Object.entries(fields)) {
+      existing.fields[name] = {
+        field: name,
+        widget: update.widget,
+        widget_settings: update.widget_settings ?? {},
+        weight: update.weight,
+        visible: update.visible,
+      };
+    }
+
+    await saveFormDisplay(existing);
+    revalidatePath(`/structure/types/${entityType}/${bundle}/form-display`);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
 // ── Content Export ──────────────────────────────────────────────────
 
 export async function exportContentAction(

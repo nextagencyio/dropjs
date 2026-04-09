@@ -480,6 +480,9 @@ export async function updateViewAction(id: string, data: {
   description?: string;
   pager?: number;
   status?: boolean;
+  display_fields?: { field: string; label?: string; formatter?: string }[];
+  filters?: { field: string; operator: string; value?: unknown; exposed?: boolean; expose_identifier?: string; expose_label?: string }[];
+  sorts?: { field: string; direction: string; exposed?: boolean }[];
 }): Promise<ActionResult> {
   await ensureInitialized();
   const auth = await requirePerm('administer views');
@@ -494,6 +497,9 @@ export async function updateViewAction(id: string, data: {
     if (data.description !== undefined) view.description = data.description;
     if (data.pager !== undefined) view.pager = data.pager;
     if (data.status !== undefined) view.status = data.status;
+    if (data.display_fields !== undefined) view.display_fields = data.display_fields;
+    if (data.filters !== undefined) view.filters = data.filters as typeof view.filters;
+    if (data.sorts !== undefined) view.sorts = data.sorts as typeof view.sorts;
 
     await coreSave(view);
     revalidatePath(`/structure/views/${id}`);
